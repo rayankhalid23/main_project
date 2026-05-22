@@ -1,7 +1,9 @@
 <?php
 
+
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Auth\LoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,7 +12,7 @@ use App\Http\Controllers\Api\AuthController;
 */
 
 // مسار تسجيل الدخول المباشر (رقم الهاتف + كلمة المرور)
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/login', [LoginController::class, 'login']);
 
 // المسارات المحمية بالتوكن (تفتح بعد تسجيل الدخول بنجاح)
 Route::middleware('auth:sanctum')->group(function () {
