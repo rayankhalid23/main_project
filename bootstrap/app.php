@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -26,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
             
             // نطبق الفحص الموحد فقط إذا كان الطلب موجهاً لمسارات الـ API
             if ($request->is('api/*')) {
+
+                // إذا كان الخطأ بسبب فحص البيانات، اتركه يمر ليظهر رسائلك المخصصة في الـ Request
+                if ($e instanceof ValidationException) {
+                    return null;
+                }
 
                 // [الحالة 1]: ضغط وحمل زائد على السيرفر (تخطي الـ Rate Limit)
                 if ($e instanceof TooManyRequestsHttpException) {
