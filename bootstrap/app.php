@@ -16,6 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+ // داخل ملف bootstrap/app.php
+then: function () { 
+    Route::middleware('api')
+        ->prefix('api/parent') // أضفنا /parent هنا
+        ->group(base_path('routes/parent.php'));
+},
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // هنا يمكنك تسجيل الـ Middlewares الخاصة بك لاحقاً
@@ -70,11 +76,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 // [الحالة 5]: شبكة الأمان المطلقة لأي خطأ برمجى مفاجئ غير متوقع في النظام
-                return response()->json([
-                    'status' => false,
-                    'error_code' => 'SERVER_ERROR',
-                    'message' => 'حدث خطأ غير متوقع في النظام.'
-                ], 500);
+                // [الحالة 5]: شبكة الأمان المطلقة - عدلناها لتظهر الخطأ الحقيقي
+return response()->json([
+    'status' => false,
+    'error_code' => 'SERVER_ERROR',
+    'message' => 'حدث خطأ غير متوقع: ' . $e->getMessage(), // أضفنا تفاصيل الخطأ هنا
+    'file' => $e->getFile(), // لمعرفة الملف المسبب
+    'line' => $e->getLine()  // لمعرفة رقم السطر
+], 500);
             }
         });
         

@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // استدعاء حزمة التوكنات لـ Sanctum
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Sanctum\HasApiTokens; 
+
 
 #[Fillable([
     'full_name',
@@ -25,19 +27,15 @@ use Laravel\Sanctum\HasApiTokens; // استدعاء حزمة التوكنات ل
     'password_hash',
     'remember_token'
 ])]
+
+
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable; // تفعيل توليد التوكنات هنا لإنهاء خطأ createToken
+    
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes; 
 
-    /**
-     * تحديد اسم الجدول الفعلي في قاعدة البيانات بشكل صريح
-     */
     protected $table = 'users';
 
-    /**
-     * تحويل أنواع البيانات عند استدعائها (Casting)
-     */
     protected function casts(): array
     {
         return [
@@ -50,12 +48,19 @@ class User extends Authenticatable
             
         ];
     }
-
-    /**
-     * توجيه لارفيل للاعتماد على حقل password_hash المخصص في قاعدة بياناتك الحقيقية
-     */
     public function getAuthPassword()
     {
         return $this->password_hash;
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    // علاقة الربط مع جدول أولياء الأمور
+    public function parentProfile()
+    {
+        return $this->hasOne(ParentModel::class, 'user_id');
     }
 }
