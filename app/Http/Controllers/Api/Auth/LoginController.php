@@ -10,9 +10,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
+use App\Traits\AuthenticatableTrait;
 
 class LoginController extends Controller
 {
+    use AuthenticatableTrait;
     public function login(LoginRequest $request)
     {
         // 1. التحقق من المستخدم

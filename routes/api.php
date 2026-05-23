@@ -20,6 +20,8 @@ Route::post('/auth/login', [LoginController::class, 'login']);
 
 // المسارات المحمية بالتوكن (تفتح بعد تسجيل الدخول بنجاح)
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::post('/auth/logout', [LoginController::class, 'logout']);
     
     // مسار تجريبي لجلب بيانات المستخدم الحالي عبر التوكن
     Route::get('/user/profile', function (\Illuminate\Http\Request $request) {
