@@ -167,7 +167,7 @@ return new class extends Migration
             $table->tinyInteger('is_verified')->default(0);
             $table->string('vehicle_image_url', 500)->nullable();
             $table->tinyInteger('has_ac')->default(1);
-            $table->enum('status', ['Active', 'Retired', 'Sold'])->default('Active');
+            $table->enum('status', ['Active', 'Pending', 'Retired', 'Out'])->default('Pending');
             $table->timestamps();
             $table->softDeletes();
 

@@ -5,6 +5,14 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// --- إضافة لحل مشكلة رفع الملفات في ويندوز ---
+// هذا السطر يوجه PHP لاستخدام المجلد داخل مشروعك بدلاً من مجلدات النظام
+putenv('TMPDIR=' . __DIR__ . '/../storage/temp');
+if (!is_dir(__DIR__ . '/../storage/temp')) {
+    mkdir(__DIR__ . '/../storage/temp', 0777, true);
+}
+// ------------------------------------------
+
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
