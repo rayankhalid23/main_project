@@ -1,10 +1,1 @@
-[Tue May 26 07:52:19 2026] 127.0.0.1:50898 [POST] URI: /api/v1/driver/register
-[Tue May 26 07:57:49 2026] 127.0.0.1:50897 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:07:29 2026] 127.0.0.1:60506 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:13:39 2026] 127.0.0.1:49681 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:17:18 2026] 127.0.0.1:60114 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:18:53 2026] 127.0.0.1:60126 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:22:26 2026] 127.0.0.1:61163 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:23:06 2026] 127.0.0.1:61196 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:30:47 2026] 127.0.0.1:61342 [POST] URI: /api/v1/driver/register
-[Tue May 26 08:31:11 2026] 127.0.0.1:65276 [GET] URI: /storage/uploads/drivers/vehicles/QksUpybTrNU5Xmvh7Qg3BYz7gf7Kj4fSvbvnF91C.png
+[Sat May 30 21:14:47 2026] 127.0.0.1:53875 [POST] URI: /api/v1/driver/profile/update

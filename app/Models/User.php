@@ -10,7 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens; 
-
+use App\Models\Driver\Driver; 
 
 #[Fillable([
     'full_name',
@@ -63,4 +63,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(ParentModel::class, 'user_id');
     }
+
+    public function driver()
+{
+    return $this->hasOne(Driver::class, 'user_id');
+}
 }

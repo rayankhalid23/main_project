@@ -25,9 +25,9 @@ class ParentRegistrationService
     /**
      * طلب كود تحقق جديد (الخطوة 1 من التسجيل)
      */
-    public function requestNewOtp(string $phone): string
+    public function requestNewOtp(string $phone_number): string
     {
-        return $this->otpService->generateAndSend($phone, 'REGISTER');
+        return $this->otpService->generateAndSend($phone_number, 'REGISTER');
     }
 
     /**

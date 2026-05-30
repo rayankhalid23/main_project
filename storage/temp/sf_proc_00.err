@@ -1,30 +1,15 @@
-[Tue May 26 09:50:37 2026] PHP 8.5.4 Development Server (http://127.0.0.1:8000) started
-[Tue May 26 09:51:04 2026] 127.0.0.1:50897 Accepted
-[Tue May 26 09:51:04 2026] 127.0.0.1:50898 Accepted
-[Tue May 26 09:52:25 2026] 127.0.0.1:50898 Closing
-[Tue May 26 09:52:26 2026] 127.0.0.1:60506 Accepted
-[Tue May 26 09:57:50 2026] 127.0.0.1:50897 Closing
-[Tue May 26 09:57:51 2026] 127.0.0.1:56584 Accepted
-[Tue May 26 10:07:30 2026] 127.0.0.1:60506 Closing
-[Tue May 26 10:07:31 2026] 127.0.0.1:49681 Accepted
-[Tue May 26 10:12:51 2026] 127.0.0.1:56584 Closed without sending a request; it was probably just an unused speculative preconnection
-[Tue May 26 10:12:51 2026] 127.0.0.1:56584 Closing
-[Tue May 26 10:12:51 2026] 127.0.0.1:60114 Accepted
-[Tue May 26 10:13:40 2026] 127.0.0.1:49681 Closing
-[Tue May 26 10:13:40 2026] 127.0.0.1:60126 Accepted
-[Tue May 26 10:17:19 2026] 127.0.0.1:60114 Closing
-[Tue May 26 10:17:19 2026] 127.0.0.1:61163 Accepted
-[Tue May 26 10:18:54 2026] 127.0.0.1:60126 Closing
-[Tue May 26 10:18:55 2026] 127.0.0.1:61196 Accepted
-[Tue May 26 10:22:26 2026] 127.0.0.1:61163 Closing
-[Tue May 26 10:22:27 2026] 127.0.0.1:61342 Accepted
-[Tue May 26 10:23:07 2026] 127.0.0.1:61196 Closing
-[Tue May 26 10:23:08 2026] 127.0.0.1:65276 Accepted
-[Tue May 26 10:30:49 2026] 127.0.0.1:61342 Closing
-[Tue May 26 10:30:50 2026] 127.0.0.1:61404 Accepted
-[Tue May 26 10:31:14 2026] 127.0.0.1:65276 Closing
-[Tue May 26 10:32:01 2026] 127.0.0.1:51270 Accepted
-[Tue May 26 10:32:08 2026] 127.0.0.1:51270 Invalid request (An existing connection was forcibly closed by the remote host)
-[Tue May 26 10:32:08 2026] 127.0.0.1:51270 Closing
-[Tue May 26 10:32:08 2026] 127.0.0.1:61404 Invalid request (An existing connection was forcibly closed by the remote host)
-[Tue May 26 10:32:08 2026] 127.0.0.1:61404 Closing
+[Sat May 30 23:14:08 2026] PHP 8.5.4 Development Server (http://127.0.0.1:8000) started
+[Sat May 30 23:14:09 2026] 127.0.0.1:52382 Accepted
+[Sat May 30 23:14:09 2026] 127.0.0.1:52383 Accepted
+[Sat May 30 23:14:29 2026] 127.0.0.1:52383 Invalid request (An existing connection was forcibly closed by the remote host)
+[Sat May 30 23:14:29 2026] 127.0.0.1:52383 Closing
+[Sat May 30 23:14:29 2026] 127.0.0.1:52382 Invalid request (An existing connection was forcibly closed by the remote host)
+[Sat May 30 23:14:29 2026] 127.0.0.1:52382 Closing
+[Sat May 30 23:14:34 2026] 127.0.0.1:53875 Accepted
+[Sat May 30 23:14:34 2026] 127.0.0.1:53876 Accepted
+[Sat May 30 23:14:47 2026] 127.0.0.1:53875 Closing
+[Sat May 30 23:14:48 2026] 127.0.0.1:53882 Accepted
+[Sat May 30 23:16:34 2026] 127.0.0.1:53876 Invalid request (An existing connection was forcibly closed by the remote host)
+[Sat May 30 23:16:34 2026] 127.0.0.1:53876 Closing
+[Sat May 30 23:16:34 2026] 127.0.0.1:53882 Invalid request (An existing connection was forcibly closed by the remote host)
+[Sat May 30 23:16:34 2026] 127.0.0.1:53882 Closing
