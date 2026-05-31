@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Driver\DriverApproval;
 
 class Driver extends Model
 {
@@ -34,5 +35,9 @@ class Driver extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(DriverDocument::class);
+    }
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(DriverApproval::class, 'driver_id');
     }
 }

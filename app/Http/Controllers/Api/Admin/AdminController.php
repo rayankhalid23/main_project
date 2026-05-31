@@ -7,6 +7,8 @@ use App\Models\Admin\Admin;
 use App\Services\Admin\AdminService;
 use App\Http\Requests\Api\Admin\StoreAdminRequest;
 use App\Http\Requests\Api\Admin\UpdateAdminRequest;
+use App\Http\Requests\Api\Admin\UpdateDriverStatusRequest;
+use App\Http\Resources\Api\Admin\DriverResource;
 use App\Http\Resources\Api\Admin\AdminResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -110,6 +112,46 @@ class AdminController extends Controller
         } catch (Exception $e) {
             Log::error("Update Admin Error: " . $e->getMessage());
             return response()->json(['status' => false, 'message' => 'تعذر تحديث البيانات.'], 500);
+        }
+    }
+    public function updateDriverStatus(UpdateDriverStatusRequest $request, $driverId)
+    {
+        try {
+            // 1. التأكد من هوية المشرف
+            $adminId = auth()->id();
+            if (!$adminId) {
+                return response()->json(['status' => false, 'message' => 'غير مصرح لك بالقيام بهذا الإجراء'], 403);
+            }
+    
+            // 2. استدعاء الخدمة (التي ستقوم بالتحديث في الجداول الثلاثة داخل Transaction)
+            $driver = $this->adminService->processDriverApproval(
+                (int)$driverId, 
+                (int)$adminId, 
+                $request->validated('status'), 
+                $request->validated('rejection_reason')
+            );
+    
+            return response()->json([
+                'status' => true,
+                'message' => 'تم تحديث حالة السائق بنجاح',
+                'data' => $driver
+            ]);
+    
+        } catch (\Illuminate\Database\QueryException $e) {
+            // هنا سنلتقط الخطأ الحقيقي من قاعدة البيانات (SQL Error)
+            \Log::error('Database Error in updateDriverStatus: ' . $e->getMessage());
+            return response()->json([
+                'status' => false, 
+                'message' => 'خطأ في قاعدة البيانات: ' . $e->getMessage() // سنرى الخطأ الحقيقي هنا!
+            ], 500);
+            
+        } catch (\Exception $e) {
+            // أي خطأ آخر
+            \Log::error('General Error in updateDriverStatus: ' . $e->getMessage());
+            return response()->json([
+                'status' => false, 
+                'message' => 'حدث خطأ غير متوقع: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

@@ -97,4 +97,10 @@ class UpdateAdminRequest extends FormRequest
             'avatar_url.max'   => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت.',
         ];
     }
+    public function rules() {
+        return [
+            'status' => 'required|in:Approved,Rejected',
+            'rejection_reason' => 'required_if:status,Rejected|string|max:500',
+        ];
+    }
 }

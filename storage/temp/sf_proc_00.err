@@ -1,37 +1,11 @@
-[Sun May 31 06:58:16 2026] PHP 8.5.4 Development Server (http://127.0.0.1:8000) started
-[Sun May 31 06:58:17 2026] 127.0.0.1:59646 Accepted
-[Sun May 31 06:58:17 2026] 127.0.0.1:59647 Accepted
-[Sun May 31 06:58:42 2026] 127.0.0.1:59647 Closing
-[Sun May 31 06:58:43 2026] 127.0.0.1:61815 Accepted
-[Sun May 31 07:01:41 2026] 127.0.0.1:61815 Invalid request (An existing connection was forcibly closed by the remote host)
-[Sun May 31 07:01:41 2026] 127.0.0.1:61815 Closing
-[Sun May 31 07:01:41 2026] 127.0.0.1:59646 Invalid request (An existing connection was forcibly closed by the remote host)
-[Sun May 31 07:01:41 2026] 127.0.0.1:59646 Closing
-[Sun May 31 07:01:48 2026] 127.0.0.1:50235 Accepted
-[Sun May 31 07:01:48 2026] 127.0.0.1:50237 Accepted
-[Sun May 31 07:02:10 2026] 127.0.0.1:50235 Closing
-[Sun May 31 07:02:10 2026] 127.0.0.1:52986 Accepted
-[Sun May 31 07:02:22 2026] 127.0.0.1:50237 Closing
-[Sun May 31 07:02:22 2026] 127.0.0.1:52991 Accepted
-[Sun May 31 07:03:24 2026] 127.0.0.1:52986 Closing
-[Sun May 31 07:03:24 2026] 127.0.0.1:53030 Accepted
-[Sun May 31 07:03:54 2026] 127.0.0.1:52991 Closing
-[Sun May 31 07:03:56 2026] 127.0.0.1:56512 Accepted
-[Sun May 31 07:05:17 2026] 127.0.0.1:53030 Closing
-[Sun May 31 07:05:17 2026] 127.0.0.1:52510 Accepted
-[Sun May 31 07:06:29 2026] 127.0.0.1:56512 Closing
-[Sun May 31 07:06:52 2026] 127.0.0.1:63551 Accepted
-[Sun May 31 07:07:32 2026] 127.0.0.1:52510 Closing
-[Sun May 31 07:07:32 2026] 127.0.0.1:55061 Accepted
-[Sun May 31 07:09:09 2026] 127.0.0.1:63551 Closing
-[Sun May 31 07:09:13 2026] 127.0.0.1:64813 Accepted
-[Sun May 31 07:12:41 2026] 127.0.0.1:55061 Closing
-[Sun May 31 07:12:43 2026] 127.0.0.1:64766 Accepted
-[Sun May 31 07:12:59 2026] 127.0.0.1:64813 Closing
-[Sun May 31 07:13:00 2026] 127.0.0.1:64773 Accepted
-[Sun May 31 07:13:57 2026] 127.0.0.1:64766 Closing
-[Sun May 31 07:13:57 2026] 127.0.0.1:64744 Accepted
-[Sun May 31 07:14:58 2026] 127.0.0.1:64744 Invalid request (An existing connection was forcibly closed by the remote host)
-[Sun May 31 07:14:58 2026] 127.0.0.1:64744 Closing
-[Sun May 31 07:14:58 2026] 127.0.0.1:64773 Invalid request (An existing connection was forcibly closed by the remote host)
-[Sun May 31 07:14:58 2026] 127.0.0.1:64773 Closing
+[Sun May 31 19:42:32 2026] PHP 8.5.4 Development Server (http://127.0.0.1:8000) started
+[Sun May 31 19:42:32 2026] 127.0.0.1:63694 Accepted
+[Sun May 31 19:42:32 2026] 127.0.0.1:63695 Accepted
+[Sun May 31 19:42:42 2026] 127.0.0.1:63694 Closing
+[Sun May 31 19:42:43 2026] 127.0.0.1:60507 Accepted
+[Sun May 31 19:43:04 2026] 127.0.0.1:63695 Closing
+[Sun May 31 19:43:05 2026] 127.0.0.1:63978 Accepted
+[Sun May 31 19:44:48 2026] 127.0.0.1:60507 Closing
+[Sun May 31 19:45:14 2026] 127.0.0.1:63978 Closing
+[Sun May 31 19:45:15 2026] 127.0.0.1:60262 Accepted
+[Sun May 31 19:45:49 2026] 127.0.0.1:62136 Accepted

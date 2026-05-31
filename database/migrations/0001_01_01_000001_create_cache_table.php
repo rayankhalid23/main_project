@@ -133,7 +133,7 @@ return new class extends Migration
             $table->string('national_id', 50)->unique();
             $table->string('license_number', 50)->unique();
             $table->date('license_expiry');
-            $table->enum('status', ['Pending', 'Approved', 'Suspended', 'Offline', 'ON_TRIP'])->default('Pending');
+            $table->enum('status', ['Pending', 'Approved', 'Suspended','Rejected', 'Offline', 'ON_TRIP'])->default('Pending');
             $table->decimal('current_lat', 10, 8)->nullable();
             $table->decimal('current_lng', 11, 8)->nullable();
             $table->timestamp('last_ping_at')->nullable();
@@ -286,6 +286,23 @@ return new class extends Migration
             $table->timestamp('uploaded_at')->useCurrent();
             $table->timestamp('reviewed_at')->nullable();
 
+            $table->index('driver_id');
+            $table->index('status');
+        });
+
+
+        // =====================================================
+        // [ 16.1 ] جدول اعتمادات السائقين (driver_approvals)
+        // =====================================================
+        Schema::create('driver_approvals', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreignId('admin_id')->constrained('admins')->onDelete('restrict')->onUpdate('cascade');
+            $table->enum('status', ['Approved', 'Rejected']);
+            $table->text('rejection_reason')->nullable(); // سبب الرفض إن وجد
+            $table->timestamp('created_at')->useCurrent();
+
+            // فهارس لتسريع الاستعلام
             $table->index('driver_id');
             $table->index('status');
         });

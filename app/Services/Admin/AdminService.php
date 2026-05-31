@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
+use App\Models\Driver\DriverApproval;
+use App\Models\Driver\Driver;
 
 class AdminService
 {
@@ -88,4 +90,35 @@ class AdminService
             return $admin->refresh()->load(['user', 'creator']);
         });
     }
+    public function processDriverApproval(int $driverId, int $adminId, string $status, ?string $reason = null)
+{
+    // تحويل الحالة إلى صيغة تتوافق مع قاعدة البيانات إذا لزم الأمر
+    $status = ucfirst(strtolower($status)); // تحويل 'approved' إلى 'Approved'
+
+    return DB::transaction(function () use ($driverId, $adminId, $status, $reason) {
+        
+        // 1. تسجيل السجل التاريخي
+        DriverApproval::create([
+            'driver_id' => $driverId,
+            'admin_id'  => $adminId,
+            'status'    => $status,
+            'rejection_reason' => $reason,
+        ]);
+
+        // 2. جلب السائق
+        $driver = Driver::findOrFail($driverId);
+        
+        // 3. تحديث الـ User (تفعيل/إيقاف)
+        $driver->user->update([
+            'is_active' => ($status === 'Approved' ? 1 : 0)
+        ]);
+        
+        // 4. تحديث حالة السائق
+        $driver->update([
+            'status' => $status
+        ]);
+
+        return $driver;
+    });
+}
 }
