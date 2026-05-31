@@ -29,6 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')
                 ->prefix('api/v1')
                 ->group(base_path('routes/Driver.php'));
+
+            // 3. أضف هذا السطر الجديد للمشرفين (Admin Module):
+            Route::middleware('api')
+                ->prefix('api/admin') // لجعل مسارات المشرفين تبدأ بـ api/admin
+                ->group(base_path('routes/Admin.php'));    
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

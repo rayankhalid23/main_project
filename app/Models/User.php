@@ -11,6 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens; 
 use App\Models\Driver\Driver; 
+use App\Models\Admin\Admin;
 
 #[Fillable([
     'full_name',
@@ -68,4 +69,8 @@ class User extends Authenticatable
 {
     return $this->hasOne(Driver::class, 'user_id');
 }
+public function admin(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Admin\Admin::class, 'user_id');
+    }
 }
