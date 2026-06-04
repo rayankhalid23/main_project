@@ -3,7 +3,7 @@
 namespace App\Services\Parent;
 
 use App\Models\User;
-use App\Models\Parent\ParentModel;
+use App\Http\Models\Parent\ParentModel;
 use App\Services\Shared\OtpService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -72,7 +72,39 @@ class ParentRegistrationService
         });
     }
 
-    /**
-     * لم نعد بحاجة لـ getOtpService لأننا قمنا بدمج المهام داخل الدوال أعلاه بشكل مباشر
-     */
+    // داخل ملف App\Services\Parent\ParentRegistrationService
+
+/**
+ * جلب بيانات ولي الأمر (مع معلومات الـ User)
+ */
+public function getParentProfile($userId)
+{
+    return User::with('parentProfile')->findOrFail($userId);
+}
+
+/**
+ * تحديث بيانات ولي الأمر
+ */
+public function updateParentProfile(int $userId, array $data)
+{
+    return DB::transaction(function () use ($userId, $data) {
+        $user = User::findOrFail($userId);
+        
+        // تحديث بيانات جدول users
+        $user->update([
+            'full_name' => $data['full_name'] ?? $user->full_name,
+        ]);
+
+        // تحديث بيانات جدول parents إذا لزم الأمر
+        if (isset($data['is_trusted'])) {
+            $user->parentProfile()->update([
+                'is_trusted' => $data['is_trusted']
+            ]);
+        }
+
+        return $user;
+    });
+}
+
+    
 }

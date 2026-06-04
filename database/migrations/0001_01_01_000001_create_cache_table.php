@@ -207,6 +207,7 @@ return new class extends Migration
             $table->decimal('lat', 10, 8);
             $table->decimal('lng', 11, 8);
             $table->text('address_text')->nullable();
+            $table->enum('status', ['approved', 'pending'])->default('approved');
 
             $table->index(['lat', 'lng']);
         });
@@ -220,6 +221,7 @@ return new class extends Migration
             $table->foreignId('school_id')->constrained('schools')->onDelete('restrict')->onUpdate('cascade');
             $table->string('full_name', 150);
             $table->date('birth_date')->nullable();
+            $table->string('grade');
             $table->foreignId('home_address_id')->constrained('addresses')->onDelete('restrict')->onUpdate('cascade');
             $table->integer('notification_radius')->default(500);
             $table->string('qr_code_token', 255)->unique()->nullable();

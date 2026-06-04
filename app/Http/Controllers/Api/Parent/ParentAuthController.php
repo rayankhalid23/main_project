@@ -73,4 +73,31 @@ class ParentAuthController extends Controller
             'message' => $message
         ], $code);
     }
+
+    // داخل ملف App\Http\Controllers\Api\Parent\ParentAuthController
+
+public function getProfile(Request $request)
+{
+    $user = $this->registrationService->getParentProfile($request->user()->id);
+    return response()->json([
+        'status' => true,
+        'data'   => new ParentResource($user)
+    ]);
+}
+
+public function updateProfile(Request $request)
+{
+    $validated = $request->validate([
+        'full_name'  => 'sometimes|string|min:3',
+        'is_trusted' => 'sometimes|boolean',
+    ]);
+
+    $user = $this->registrationService->updateParentProfile($request->user()->id, $validated);
+    
+    return response()->json([
+        'status'  => true,
+        'message' => 'تم تحديث البيانات بنجاح',
+        'data'    => new ParentResource($user)
+    ]);
+}
 }

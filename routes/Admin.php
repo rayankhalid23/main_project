@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\Admin\SchoolController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     
@@ -19,4 +20,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // سيصبح الرابط: api/admin/drivers/{id}/status
         Route::post('/{id}/status', [AdminController::class, 'updateDriverStatus']);
     });
+
+    Route::get('/schools', [SchoolController::class, 'index']);      // جلب الكل (المعتمد والمعلق للمراجعة)
+Route::post('/schools', [SchoolController::class, 'store']);     // إضافة مدرسة معتمدة مباشرة
+Route::get('/schools/{school}', [SchoolController::class, 'show']);
+Route::post('/schools/{school}', [SchoolController::class, 'update']); // تحديث أو تغيير الحالة إلى approved
+Route::delete('/schools/{school}', [SchoolController::class, 'destroy']);
 });

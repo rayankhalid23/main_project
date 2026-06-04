@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,30 +9,31 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens; 
 use App\Models\Driver\Driver; 
 use App\Models\Admin\Admin;
-
-#[Fillable([
-    'full_name',
-    'phone_number',
-    'password_hash',
-    'avatar_url',
-    'role_id',
-    'is_active',
-    'phone_verified',
-    'alternative_phone',
-    'last_login_at'
-])]
-#[Hidden([
-    'password_hash',
-    'remember_token'
-])]
-
+use App\Models\Parent\ParentModel; // تأكد من استدعاء المسار الصحيح
 
 class User extends Authenticatable
 {
-    
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes; 
 
     protected $table = 'users';
+
+    // الطريقة التقليدية والمستقرة لتعريف الحقول
+    protected $fillable = [
+        'full_name',
+        'phone_number',
+        'password_hash',
+        'avatar_url',
+        'role_id',
+        'is_active',
+        'phone_verified',
+        'alternative_phone',
+        'last_login_at'
+    ];
+
+    protected $hidden = [
+        'password_hash',
+        'remember_token'
+    ];
 
     protected function casts(): array
     {
@@ -46,9 +44,9 @@ class User extends Authenticatable
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
-            
         ];
     }
+
     public function getAuthPassword()
     {
         return $this->password_hash;
@@ -66,11 +64,12 @@ class User extends Authenticatable
     }
 
     public function driver()
-{
-    return $this->hasOne(Driver::class, 'user_id');
-}
-public function admin(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasOne(\App\Models\Admin\Admin::class, 'user_id');
+        return $this->hasOne(Driver::class, 'user_id');
+    }
+
+    public function admin()
+    {
+        return $this->hasOne(Admin::class, 'user_id');
     }
 }
