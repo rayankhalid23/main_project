@@ -34,7 +34,14 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')
                 ->prefix('api/admin') // لجعل مسارات المشرفين تبدأ بـ api/admin
                 ->group(base_path('routes/Admin.php'));    
+            
+            // 4. 🚀 تسجيل مسارات طلبات الاشتراكات الموحدة المضافة حديثاً:
+            // 4. 🚀 تسجيل مسارات طلبات الاشتراكات الموحدة المضافة حديثاً:
+Route::middleware('api')
+->prefix('api') // 🔥 تم تعديله هنا ليكون api مباشرة لتفعيل روابط parent و driver و contracts فوراً
+->group(base_path('routes/request.php'));   
         },
+
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // هنا يمكنك تسجيل الـ Middlewares الخاصة بك لاحقاً
@@ -80,13 +87,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 // [الحالة 4]: طلب عنصر غير موجود (موظف محذوف، مخزن ملغي، رابط خطأ)
-                if ($e instanceof NotFoundHttpException) {
-                    return response()->json([
-                        'status' => false,
-                        'error_code' => 'NOT_FOUND',
-                        'message' => 'العنصر أو الرابط الذي تحاول الوصول إليه غير موجود أو تم حذفه مؤقتاً.'
-                    ], 404);
-                }
+                // [الحالة 4]: طلب عنصر غير موجود (موظف محذوف، مخزن ملغي، رابط خطأ)
+if ($e instanceof NotFoundHttpException) {
+    return response()->json([
+        'status' => false,
+        'error_code' => 'NOT_FOUND',
+        'message' => 'العنصر أو الرابط الذي تحاول الوصول إليه غير موجود أو تم حذفه مؤقتاً.',
+        
+        // 🚀 أضف هذه الأسطر الثلاثة المطورّة لكشف مصدر الخطأ فوراً:
+        'debug_message' => $e->getMessage(), 
+        'real_file'     => $e->getFile(),
+        'real_line'     => $e->getLine(),
+        'caused_by'     => $e->getPrevious() ? get_class($e->getPrevious()) : 'رابط خطأ (Route)'
+    ], 404);
+}
 
                 // [الحالة 5]: شبكة الأمان المطلقة - تظهر تفاصيل الخطأ بدقة للمطور أثناء التطوير
                 return response()->json([

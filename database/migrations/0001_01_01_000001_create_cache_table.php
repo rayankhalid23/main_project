@@ -254,20 +254,69 @@ return new class extends Migration
             $table->index('created_at');
         });
 
+        //=============================================================
+        // جدول  العقد بين الطرفين 
+        //=============================================================
+        Schema::create('contracts', function (Blueprint $table) {
+            $table->id();
+            
+            // 1. تعريف العمود أولاً (يجب أن يكون unsignedBigInteger لأنه يطابق الـ id)
+            $table->unsignedBigInteger('subscription_request_id'); 
+            
+            // 2. ربط المفتاح الأجنبي بهذا العمود
+            $table->foreign('subscription_request_id')->references('id')->on('requests')->onDelete('cascade');
+            
+            $table->foreignId('parent_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('driver_id')->constrained('users')->onDelete('cascade');
+            
+            // باقي الحقول...
+            $table->decimal('price', 8, 2);
+            $table->time('pickup_time');
+            $table->time('dropoff_time');
+            $table->integer('max_waiting_time');
+            $table->json('selected_clauses'); 
+            $table->enum('status', ['pending_parent_approval', 'activated', 'rejected'])->default('pending_parent_approval');
+            $table->timestamps();
+        });
+
+        //==========================================
+        //    جدول الي فيه الشروط العقود 
+        //==========================================
+
+        Schema::create('clauses', function (Blueprint $table) {
+            $table->id();
+            
+            // تصنيف الشرط (مثال: مالي، سلامة، سلوك، مواعيد) لتسهيل الفلترة في الموبايل
+            $table->string('category')->default('عام'); 
+            
+            // نص الشرط القانوني بالتفصيل
+            $table->text('clause_text'); 
+            
+            $table->timestamps();
+        });
+
         // =====================================================
-        // [ 15 ] جدول الطلبات (requests)
+        // [ 15 ] جدول الطلبات (requests) - تم التحديث ليدعم تفاصيل الاشتراكات
         // =====================================================
         Schema::create('requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('parent_id')->constrained('parents')->onDelete('cascade')->onUpdate('cascade');
             $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade')->onUpdate('cascade');
-            $table->enum('status', ['pending', 'accepted', 'rejected', 'cancelled'])->default('pending');
+            
+            // --- الإضافات الجديدة المضافة للتوافق مع متطلباتك ---
+            $table->foreignId('school_id')->constrained('schools')->onDelete('cascade')->onUpdate('cascade');
+            $table->string('timing', 50); // يقبل: morning, evening, both
+            // ----------------------------------------------------
+
+            $table->enum('status', ['pending', 'accepted', 'rejected', 'contract_offered']);
             $table->text('notes')->nullable();
             $table->integer('children_count')->default(1);
             $table->timestamp('created_at')->useCurrent();
 
+            // الفهارس (Indices) لضمان سرعة الاستعلام العالية
             $table->index('parent_id');
             $table->index('driver_id');
+            $table->index('school_id'); // فهرس جديد للمدرسة
             $table->index('status');
         });
 

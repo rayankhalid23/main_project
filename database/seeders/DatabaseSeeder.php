@@ -93,7 +93,7 @@ class DatabaseSeeder extends Seeder
             'full_name' => 'محمود السائق',
             'phone_number' => '0912345679',
             'password_hash' => Hash::make('D123456'),
-            'role_id' => 4, // يطابق التحديث الجديد لـ السائق
+            'role_id' => 4, 
             'is_active' => 1,
             'phone_verified' => 1,
             'created_at' => Carbon::now(),
@@ -121,9 +121,7 @@ class DatabaseSeeder extends Seeder
             ]
         ]);
 
-        // =======================================================
-        // [ الإضافة الجديدة ] عناوين متعددة لولي الأمر (خالد) داخل طرابلس
-        // =======================================================
+        // عناوين متعددة لولي الأمر (خالد) داخل طرابلس
         DB::table('addresses')->insertOrIgnore([
             [
                 'id' => 1,
@@ -139,7 +137,7 @@ class DatabaseSeeder extends Seeder
                 'label' => 'بيت الجد (بن عاشور)',
                 'lat' => 32.87500000,
                 'lng' => 13.18500000,
-                'is_default' => 0, // عنوان فرعي
+                'is_default' => 0, 
             ],
             [
                 'id' => 3,
@@ -147,15 +145,43 @@ class DatabaseSeeder extends Seeder
                 'label' => 'شقة حي الأندلس (قرب القنصلية)',
                 'lat' => 32.88800000,
                 'lng' => 13.14200000,
-                'is_default' => 0, // عنوان فرعي آخر
+                'is_default' => 0, 
             ]
         ]);
 
-        // تخصيص جدول الـ drivers وتعديل الـ user_id ليطابق الرقم الجديد (4)
+        // =======================================================
+        // [ الإضافة الجديدة ] إضافة الأبناء وتوصيلهم بالعناوين والمدارس
+        // =======================================================
+        DB::table('children')->insertOrIgnore([
+            [
+                'id' => 1,
+                'parent_id' => 1, // مرتبط بـ خالد ولي الأمر
+                'full_name' => 'يوسف خالد',
+                
+                'birth_date' => '2015-05-12',
+                'school_id' => 1, // يفترض وجود مدرسة رقم 1 من الـ SchoolSeeder
+                'preferred_time_slot' => 'BOTH', // فترتين (ذهاب وإياب)
+                'home_address_id' => 1, // ربطه بالعنوان رقم 1 (السراج)
+                
+            ],
+            [
+                'id' => 2,
+                'parent_id' => 1, // مرتبط بـ خالد ولي الأمر
+                'full_name' => 'سارة خالد',
+               
+                'birth_date' => '2018-09-20',
+                'school_id' => 1, 
+                'preferred_time_slot' => 'MORNING', // فترة صباحية فقط
+                'home_address_id' => 2, // ربطها بالعنوان رقم 2 (بن عاشور)
+             
+            ]
+        ]);
+
+        // تخصيص جدول الـ drivers 
         DB::table('drivers')->insertOrIgnore([
             [
                 'id' => 1,
-                'user_id' => 4, // مرتبط بـ محمود السائق بعد التعديل
+                'user_id' => 4, // مرتبط بـ محمود السائق
                 'national_id' => '119900000000',
                 'license_number' => 'L-554433',
                 'license_expiry' => Carbon::now()->addYears(3),
@@ -170,5 +196,4 @@ class DatabaseSeeder extends Seeder
             ]
         ]);
     }
-    
 }

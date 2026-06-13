@@ -1,49 +1,58 @@
-[Thu Jun  4 09:20:27 2026] PHP 8.5.4 Development Server (http://127.0.0.1:8000) started
-[Thu Jun  4 09:20:28 2026] 127.0.0.1:63536 Accepted
-[Thu Jun  4 09:20:28 2026] 127.0.0.1:63537 Accepted
-[Thu Jun  4 09:24:10 2026] 127.0.0.1:63537 Closing
-[Thu Jun  4 09:24:11 2026] 127.0.0.1:59843 Accepted
-[Thu Jun  4 09:25:20 2026] 127.0.0.1:63536 Closing
-[Thu Jun  4 09:25:40 2026] 127.0.0.1:62954 Accepted
-[Thu Jun  4 09:26:08 2026] 127.0.0.1:59843 Closing
-[Thu Jun  4 09:26:09 2026] 127.0.0.1:64594 Accepted
-[Thu Jun  4 09:28:37 2026] 127.0.0.1:62954 Closing
-[Thu Jun  4 09:29:38 2026] 127.0.0.1:64594 Closing
-[Thu Jun  4 09:29:40 2026] 127.0.0.1:65301 Accepted
-[Thu Jun  4 09:30:00 2026] 127.0.0.1:50107 Accepted
-[Thu Jun  4 09:30:02 2026] 127.0.0.1:65301 Closing
-[Thu Jun  4 09:30:02 2026] 127.0.0.1:50111 Accepted
-[Thu Jun  4 09:32:56 2026] 127.0.0.1:50107 Closing
-[Thu Jun  4 09:32:57 2026] 127.0.0.1:49279 Accepted
-[Thu Jun  4 09:35:25 2026] 127.0.0.1:50111 Closing
-[Thu Jun  4 09:35:25 2026] 127.0.0.1:49264 Accepted
-[Thu Jun  4 09:35:48 2026] 127.0.0.1:49279 Closing
-[Thu Jun  4 09:35:48 2026] 127.0.0.1:49274 Accepted
-[Thu Jun  4 09:37:14 2026] 127.0.0.1:49264 Closing
-[Thu Jun  4 09:37:15 2026] 127.0.0.1:59836 Accepted
-[Thu Jun  4 09:39:22 2026] 127.0.0.1:49274 Closing
-[Thu Jun  4 09:39:22 2026] 127.0.0.1:52433 Accepted
-[Thu Jun  4 09:39:41 2026] 127.0.0.1:59836 Closing
-[Thu Jun  4 09:39:41 2026] 127.0.0.1:52440 Accepted
-[Thu Jun  4 09:40:04 2026] 127.0.0.1:52433 Closing
-[Thu Jun  4 09:40:05 2026] 127.0.0.1:49366 Accepted
-[Thu Jun  4 09:40:31 2026] 127.0.0.1:52440 Closing
-[Thu Jun  4 09:40:31 2026] 127.0.0.1:49375 Accepted
-[Thu Jun  4 09:43:43 2026] 127.0.0.1:49366 Closing
-[Thu Jun  4 09:43:43 2026] 127.0.0.1:60928 Accepted
-[Thu Jun  4 09:44:31 2026] 127.0.0.1:49375 Closing
-[Thu Jun  4 09:44:31 2026] 127.0.0.1:60939 Accepted
-[Thu Jun  4 09:44:40 2026] 127.0.0.1:60928 Closing
-[Thu Jun  4 09:45:19 2026] 127.0.0.1:60939 Closing
-[Thu Jun  4 09:45:19 2026] 127.0.0.1:60957 Accepted
-[Thu Jun  4 09:45:44 2026] 127.0.0.1:60957 Closing
-[Thu Jun  4 09:45:44 2026] 127.0.0.1:60964 Accepted
-[Thu Jun  4 09:45:44 2026] 127.0.0.1:60967 Accepted
-[Thu Jun  4 09:46:42 2026] 127.0.0.1:60964 Closing
-[Thu Jun  4 09:46:42 2026] 127.0.0.1:63790 Accepted
-[Thu Jun  4 09:46:55 2026] 127.0.0.1:60967 Closing
-[Thu Jun  4 09:46:55 2026] 127.0.0.1:63797 Accepted
-[Thu Jun  4 09:47:35 2026] 127.0.0.1:63797 Invalid request (An existing connection was forcibly closed by the remote host)
-[Thu Jun  4 09:47:35 2026] 127.0.0.1:63797 Closing
-[Thu Jun  4 09:47:35 2026] 127.0.0.1:63790 Invalid request (An existing connection was forcibly closed by the remote host)
-[Thu Jun  4 09:47:35 2026] 127.0.0.1:63790 Closing
+[Fri Jun 12 21:55:56 2026] PHP 8.5.4 Development Server (http://127.0.0.1:8000) started
+[Fri Jun 12 21:55:56 2026] 127.0.0.1:50443 Accepted
+[Fri Jun 12 21:55:56 2026] 127.0.0.1:50444 Accepted
+[Fri Jun 12 21:56:34 2026] 127.0.0.1:50444 Closing
+[Fri Jun 12 21:56:35 2026] 127.0.0.1:51559 Accepted
+[Fri Jun 12 21:56:57 2026] 127.0.0.1:50443 Closing
+[Fri Jun 12 21:56:58 2026] 127.0.0.1:51590 Accepted
+[Fri Jun 12 21:57:22 2026] 127.0.0.1:51559 Closing
+[Fri Jun 12 21:57:23 2026] 127.0.0.1:63531 Accepted
+[Fri Jun 12 21:58:20 2026] 127.0.0.1:51590 Closing
+[Fri Jun 12 21:58:21 2026] 127.0.0.1:51905 Accepted
+[Fri Jun 12 21:58:42 2026] 127.0.0.1:63531 Closing
+[Fri Jun 12 21:59:54 2026] 127.0.0.1:50991 Accepted
+[Fri Jun 12 22:03:21 2026] 127.0.0.1:51905 Closing
+[Fri Jun 12 22:03:21 2026] 127.0.0.1:53548 Accepted
+[Fri Jun 12 22:06:25 2026] 127.0.0.1:50991 Closing
+[Fri Jun 12 22:06:25 2026] 127.0.0.1:61187 Accepted
+[Fri Jun 12 22:06:48 2026] 127.0.0.1:53548 Closing
+[Fri Jun 12 22:06:50 2026] 127.0.0.1:61213 Accepted
+[Fri Jun 12 22:07:21 2026] 127.0.0.1:61187 Closing
+[Fri Jun 12 22:07:22 2026] 127.0.0.1:61227 Accepted
+[Fri Jun 12 22:08:58 2026] 127.0.0.1:61213 Closing
+[Fri Jun 12 22:08:59 2026] 127.0.0.1:62829 Accepted
+[Fri Jun 12 22:10:30 2026] 127.0.0.1:61227 Closing
+[Fri Jun 12 22:10:31 2026] 127.0.0.1:58702 Accepted
+[Fri Jun 12 22:14:34 2026] 127.0.0.1:62829 Closing
+[Fri Jun 12 22:14:35 2026] 127.0.0.1:58593 Accepted
+[Fri Jun 12 22:16:00 2026] 127.0.0.1:58702 Closing
+[Fri Jun 12 22:16:01 2026] 127.0.0.1:50202 Accepted
+[Fri Jun 12 22:17:07 2026] 127.0.0.1:58593 Closing
+[Fri Jun 12 22:17:42 2026] 127.0.0.1:50208 Accepted
+[Fri Jun 12 22:25:34 2026] 127.0.0.1:50202 Closing
+[Fri Jun 12 22:25:34 2026] 127.0.0.1:56615 Accepted
+[Fri Jun 12 22:27:13 2026] 127.0.0.1:50208 Closing
+[Fri Jun 12 22:27:13 2026] 127.0.0.1:54675 Accepted
+[Fri Jun 12 22:31:21 2026] 127.0.0.1:56615 Closing
+[Fri Jun 12 22:31:23 2026] 127.0.0.1:64455 Accepted
+[Fri Jun 12 22:42:13 2026] 127.0.0.1:54675 Closed without sending a request; it was probably just an unused speculative preconnection
+[Fri Jun 12 22:42:13 2026] 127.0.0.1:54675 Closing
+[Fri Jun 12 22:42:14 2026] 127.0.0.1:59903 Accepted
+[Fri Jun 12 22:46:21 2026] 127.0.0.1:64455 Closed without sending a request; it was probably just an unused speculative preconnection
+[Fri Jun 12 22:46:21 2026] 127.0.0.1:64455 Closing
+[Fri Jun 12 22:46:22 2026] 127.0.0.1:49231 Accepted
+[Fri Jun 12 22:48:27 2026] 127.0.0.1:59903 Closing
+[Fri Jun 12 22:48:28 2026] 127.0.0.1:57105 Accepted
+[Fri Jun 12 22:49:05 2026] 127.0.0.1:49231 Closing
+[Fri Jun 12 22:49:06 2026] 127.0.0.1:57116 Accepted
+[Fri Jun 12 22:49:51 2026] 127.0.0.1:57105 Closing
+[Fri Jun 12 22:49:53 2026] 127.0.0.1:54275 Accepted
+[Fri Jun 12 22:53:34 2026] 127.0.0.1:57116 Closing
+[Fri Jun 12 22:53:35 2026] 127.0.0.1:54803 Accepted
+[Fri Jun 12 23:04:54 2026] 127.0.0.1:54275 Closed without sending a request; it was probably just an unused speculative preconnection
+[Fri Jun 12 23:04:54 2026] 127.0.0.1:54275 Closing
+[Fri Jun 12 23:04:54 2026] 127.0.0.1:63533 Accepted
+[Sat Jun 13 00:11:54 2026] 127.0.0.1:54803 Closed without sending a request; it was probably just an unused speculative preconnection
+[Sat Jun 13 00:11:54 2026] 127.0.0.1:54803 Closing
+[Sat Jun 13 00:11:54 2026] 127.0.0.1:63533 Closed without sending a request; it was probably just an unused speculative preconnection
+[Sat Jun 13 00:11:54 2026] 127.0.0.1:63533 Closing
