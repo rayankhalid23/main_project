@@ -68,11 +68,21 @@ class LoginController extends Controller
                 ]
             );
 
+            // تحديد مسمى الدور (Role Name) بناءً على المعرف في قاعدة البيانات
+            $roleName = match ((int) $user->role_id) {
+                1 => 'مدير النظام',
+                2 => 'مشرف',
+                3 => 'ولي أمر',
+                4 => 'سائق',
+                default => 'مستخدم',
+            };
+
             return response()->json([
                 'status' => true, 
-                'message' => 'تم تسجيل الدخول بنجاح!',
+                'message' => "مرحباً {$user->full_name}، تم تسجيل الدخول بنجاح!", // رسالة الترحيب الديناميكية
                 'access_token' => $token,
                 'token_type' => 'Bearer',
+                'role_name' => $roleName, // إضافة اسم الدور هنا
                 'user' => new UserResource($user)
             ], 200);
 

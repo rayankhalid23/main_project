@@ -58,11 +58,21 @@ class AddressController extends Controller
 
     public function destroy(Address $address): JsonResponse
     {
-        $this->addressService->deleteAddress($address);
+        try {
+            $this->addressService->deleteAddress($address);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'تم حذف العنوان بنجاح من دفتر عناوينك.'
-        ], Response::HTTP_OK);
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حذف العنوان بنجاح من دفتر عناوينك.'
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            // إمساك خطأ الارتباط وعرض الرسالة التجارية لولي الأمر
+            return response()->json([
+                'success'    => false,
+                'error_code' => 'ADDRESS_ALREADY_IN_USE',
+                'message'    => $e->getMessage()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY); // Code: 422
+        }
     }
 }

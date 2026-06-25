@@ -8,12 +8,10 @@ use App\Models\User;
 
 class Admin extends Model
 {
-    public $timestamps = false;
-    // تحديد اسم الجدول في قاعدة البيانات
+    // ملاحظة: إذا كان الجدول يحتوي على أعمدة created_at، 
+    // فمن الأفضل حذف 'public $timestamps = false;' لكي يقوم لارافيل بإدارة التواريخ تلقائياً.
     protected $table = 'admins';
-   
 
-    // الحقول المسموح بتعبئتها جماعياً لحماية النظام من ثغرات الإدخال (Mass Assignment)
     protected $fillable = [
         'user_id',
         'created_by'
@@ -21,8 +19,6 @@ class Admin extends Model
 
     /**
      * علاقة المشرف بحسابه الأساسي في جدول المستخدمين
-     * كل مشرف هو في الأصل مستخدم (User) له اسم بريد وهاتف.
-     * * @return BelongsTo
      */
     public function user(): BelongsTo
     {
@@ -30,12 +26,11 @@ class Admin extends Model
     }
 
     /**
-     * علاقة المشرف بالشخص الذي قام بإنشائه (المدير الأعلى)
-     * لمعرفة من الأدمن أو السوبر أدمن الذي أضاف هذا الحساب.
-     * * @return BelongsTo
+     * علاقة المشرف بالشخص الذي قام بإنشائه (المشرف الآخر)
+     * هنا نربط بـ Admin وليس بـ User لأن created_by هو معرف المشرف
      */
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Admin::class, 'created_by');
     }
 }

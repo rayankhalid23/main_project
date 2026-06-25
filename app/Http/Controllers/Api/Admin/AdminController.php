@@ -7,11 +7,13 @@ use App\Models\Admin\Admin;
 use App\Services\Admin\AdminService;
 use App\Http\Requests\Api\Admin\StoreAdminRequest;
 use App\Http\Requests\Api\Admin\UpdateAdminRequest;
-use App\Http\Requests\Api\Admin\UpdateDriverStatusRequest;
-use App\Http\Resources\Api\Admin\DriverResource;
 use App\Http\Resources\Api\Admin\AdminResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use Exception;
 
 class AdminController extends Controller
@@ -87,71 +89,108 @@ class AdminController extends Controller
     }
 
     /**
-     * تعديل بيانات المشرف
+     * تعديل بيانات المشرف (يدعم التحديث الجزئي الموثق)
      */
     public function update(UpdateAdminRequest $request, $id): JsonResponse
     {
         try {
-            $admin = Admin::find($id);
+            $admin = Admin::with('user')->find($id);
 
-            if (!$admin) {
+            if (!$admin || !$admin->user) {
                 return response()->json(['status' => false, 'message' => 'عذراً، المشرف غير موجود.'], 404);
+            }
+
+            $data = $request->validated();
+            $emailChanged = false;
+
+            if (!empty($data['email']) && $data['email'] !== $admin->user->email) {
+                $newEmail = $data['email'];
+                unset($data['email']); 
+
+                $token = Str::random(40);
+
+                $approveUrl = URL::signedRoute('admin.email.approve', ['token' => $token]);
+                $rejectUrl  = URL::signedRoute('admin.email.reject', ['token' => $token]);
+
+                Cache::put("admin_email_change_{$token}", [
+                    'admin_user_id' => $admin->user_id,
+                    'new_email'     => $newEmail
+                ], now()->addMinutes(30));
+
+                Log::info("=== Admin Email Change Request ===");
+                Log::info("🟢 Approve Link: " . $approveUrl);
+                Log::info("🔴 Reject Link: " . $rejectUrl);
+
+                app(\App\Services\Shared\EmailService::class)->sendEmailChangeLink(
+                    $newEmail, 
+                    $admin->user->full_name, 
+                    $approveUrl, 
+                    $rejectUrl
+                );
+
+                $emailChanged = true;
             }
 
             $updatedAdmin = $this->adminService->updateAdmin(
                 $admin, 
-                $request->validated(), 
-                $request->file('avatar_url')
+                $data, 
+                $request->file('avatar')
             );
 
             return response()->json([
                 'status'  => true,
-                'message' => 'تم تحديث بيانات المشرف بنجاح.',
-                'data'    => new AdminResource($updatedAdmin)
+                'message' => $emailChanged 
+                    ? 'تم تحديث البيانات المرفقة بنجاح. أرسلنا رابط تأكيد لبريدك الجديد، يرجى مراجعته لتفعيله بكبسة زر.'
+                    : 'تم تحديث بيانات المشرف بنجاح.',
+                'data'    => new AdminResource($updatedAdmin) // سيعمل بكفاءة مطلقة بعد تنظيف الريسورس
             ], 200);
+
         } catch (Exception $e) {
             Log::error("Update Admin Error: " . $e->getMessage());
-            return response()->json(['status' => false, 'message' => 'تعذر تحديث البيانات.'], 500);
+            return response()->json(['status' => false, 'message' => 'تعذر تحديث البيانات: ' . $e->getMessage()], 500);
         }
     }
-    public function updateDriverStatus(UpdateDriverStatusRequest $request, $driverId)
+
+    public function approveEmailChange(Request $request, $token): JsonResponse
     {
         try {
-            // 1. التأكد من هوية المشرف
-            $adminId = auth()->id();
-            if (!$adminId) {
-                return response()->json(['status' => false, 'message' => 'غير مصرح لك بالقيام بهذا الإجراء'], 403);
+            if (! $request->hasValidSignature()) {
+                return response()->json(['status' => false, 'message' => 'عذراً، هذا الرابط غير صالح أو انتهت صلاحيته!'], 403);
             }
-    
-            // 2. استدعاء الخدمة (التي ستقوم بالتحديث في الجداول الثلاثة داخل Transaction)
-            $driver = $this->adminService->processDriverApproval(
-                (int)$driverId, 
-                (int)$adminId, 
-                $request->validated('status'), 
-                $request->validated('rejection_reason')
-            );
-    
-            return response()->json([
-                'status' => true,
-                'message' => 'تم تحديث حالة السائق بنجاح',
-                'data' => $driver
+
+            $cachedData = Cache::get("admin_email_change_{$token}");
+            if (!$cachedData) {
+                return response()->json(['status' => false, 'message' => 'الرابط منتهي الصلاحية أو تم استخدامه مسبقاً.'], 400);
+            }
+
+            $user = \App\Models\User::findOrFail($cachedData['admin_user_id']);
+            $user->update([
+                'email' => $cachedData['new_email'],
+                'email_verified_at' => now()
             ]);
-    
-        } catch (\Illuminate\Database\QueryException $e) {
-            // هنا سنلتقط الخطأ الحقيقي من قاعدة البيانات (SQL Error)
-            \Log::error('Database Error in updateDriverStatus: ' . $e->getMessage());
-            return response()->json([
-                'status' => false, 
-                'message' => 'خطأ في قاعدة البيانات: ' . $e->getMessage() // سنرى الخطأ الحقيقي هنا!
-            ], 500);
-            
-        } catch (\Exception $e) {
-            // أي خطأ آخر
-            \Log::error('General Error in updateDriverStatus: ' . $e->getMessage());
-            return response()->json([
-                'status' => false, 
-                'message' => 'حدث خطأ غير متوقع: ' . $e->getMessage()
-            ], 500);
+
+            Cache::forget("admin_email_change_{$token}");
+
+            return response()->json(['status' => true, 'message' => 'تم تفعيل وتحديث بريدك الإلكتروني بنجاح! 🎉'], 200);
+        } catch (Exception $e) {
+            Log::error("Approve Email Change Error: " . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'حدث خطأ أثناء معالجة الطلب.'], 500);
+        }
+    }
+
+    public function rejectEmailChange(Request $request, $token): JsonResponse
+    {
+        try {
+            if (! $request->hasValidSignature()) {
+                return response()->json(['status' => false, 'message' => 'رابط غير صالح أو تم التلاعب به.'], 403);
+            }
+
+            Cache::forget("admin_email_change_{$token}");
+
+            return response()->json(['status' => true, 'message' => 'تم إلغاء طلب تغيير البريد الإلكتروني بنجاح.'], 200);
+        } catch (Exception $e) {
+            Log::error("Reject Email Change Error: " . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'حدث خطأ أثناء إلغاء الطلب.'], 500);
         }
     }
 }

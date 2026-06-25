@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "tunnel": "lt --port 8000 --subdomain darby-app-api",
+        "backend": "concurrently \"php artisan serve\" \"npm run tunnel\""
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -18,6 +20,7 @@
         "vite": "^8.0.0"
     },
     "dependencies": {
-        "install": "^0.13.0"
+        "install": "^0.13.0",
+        "localtunnel": "^2.0.2"
     }
 }

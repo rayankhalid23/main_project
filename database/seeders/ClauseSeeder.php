@@ -160,7 +160,11 @@ class ClauseSeeder extends Seeder
         ];
 
         foreach ($clauses as $clause) {
-            Clause::create($clause);
+            Clause::updateOrCreate(
+                ['clause_text' => $clause['clause_text']], // المعيار للتحقق من التكرار
+                $clause
+            );
         }
+            
     }
 }

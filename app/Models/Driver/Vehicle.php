@@ -11,6 +11,10 @@ class Vehicle extends Model
     use SoftDeletes;
 
     protected $table = 'vehicles';
+    const DELETED_AT = 'deleted_at';
+
+    // تفعيل الطوابع الزمنية الافتراضية والحذف الناعم القياسي
+    public $timestamps = true;
 
     protected $fillable = [
         'driver_id', 'plate_number', 'brand', 'model', 'year', 'color', 

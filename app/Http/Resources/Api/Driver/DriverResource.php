@@ -10,42 +10,44 @@ use Exception;
 class DriverResource extends JsonResource
 {
     /**
-     * تحويل كائن السائق إلى مصفوفة JSON احترافية آمنة
-     *
-     * @param  Request  $request
-     * @return array
+     * تحويل كائن السائق إلى مصفوفة JSON احترافية متوافقة مع التعديل والعرض
      */
     public function toArray(Request $request): array
     {
         try {
-            // التحقق من وجود البيانات الأساسية لتفادي أخطاء محاولة القراءة من كائن فارغ (Null-Safe)
             if (!$this->resource) {
                 return [];
             }
 
             return [
-                // 1. البيانات الشخصية والحساب (دمج من جدول users إذا كانت العلاقة محملة)
+                // 1. البيانات الشخصية والحساب
                 'id'            => (int) $this->id,
                 'account_id'    => (int) $this->user_id,
                 'full_name'     => $this->user?->full_name ?? '',
+                'gender'        => $this->gender ?? '',
                 'phone_number'  => $this->user?->phone_number ?? '',
-                'avatar_url'    => $this->user?->avatar_url ? url($this->user->avatar_url) : null,
+                'alternative_phone' => $this->user?->alternative_phone ?? null,
+                'email'         => $this->user?->email ?? '', 
+                'new_email_temporary'  => $this->user?->new_email_temporary ?? null,
+                'email_change_pending' => (bool) ($this->user?->email_change_pending ?? false),
+                'avatar_url'    => $this->user?->avatar_url ? asset($this->user->avatar_url) : null,
                 'is_active'     => (bool) ($this->user?->is_active ?? false),
 
-                // 2. البيانات المهنية للسائق (من جدول drivers)
+                'access_token'      => $this->when(isset($this->access_token) || isset($this->user->access_token), $this->access_token ?? $this->user?->access_token),
+
+                // 2. البيانات المهنية
                 'national_id'    => $this->national_id,
                 'license_number' => $this->license_number,
                 'license_expiry' => $this->license_expiry,
                 'driver_status'  => $this->status ?? 'Pending',
                 
-                // بيانات تتبع الموقع الفورية (تظهر إذا وجدت قيم في قاعدة البيانات)
                 'location' => [
-                    'lat' => $this->current_lat ? (float) $this->current_lat : null,
-                    'lng' => $this->current_lng ? (float) $this->current_lng : null,
+                    'lat'       => $this->current_lat ? (float) $this->current_lat : null,
+                    'lng'       => $this->current_lng ? (float) $this->current_lng : null,
                     'last_ping' => $this->last_ping_at,
                 ],
 
-                // 3. بيانات المركبة (تظهر فقط إذا كانت العلاقة محملة مع السائق من خلال with)
+                // 3. المركبات
                 'vehicles' => $this->relationLoaded('vehicles') ? $this->vehicles->map(function ($vehicle) {
                     return [
                         'id'                => (int) $vehicle->id,
@@ -58,38 +60,27 @@ class DriverResource extends JsonResource
                         'capacity'          => (int) $vehicle->capacity_manual,
                         'has_ac'            => (bool) $vehicle->has_ac,
                         'is_verified'       => (bool) $vehicle->is_verified,
-                        'vehicle_image_url' => $vehicle->vehicle_image_url ? url($vehicle->vehicle_image_url) : null,
+                        'vehicle_image_url' => $vehicle->vehicle_image_url ? asset($vehicle->vehicle_image_url) : null,
                         'status'            => $vehicle->status,
                     ];
                 }) : [],
 
-                // 4. بيانات الوثائق والمستندات المرفوعة (تظهر فقط إذا كانت العلاقة محملة)
+                // 4. الوثائق
                 'documents' => $this->relationLoaded('documents') ? $this->documents->map(function ($doc) {
                     return [
-                        'id'         => (int) $doc->id,
-                        'doc_type'   => $doc->doc_type,
-                        'file_url'   => $doc->file_url ? url($doc->file_url) : null,
-                        'status'     => $doc->status,
-                        'feedback'   => $doc->feedback, // يظهر سبب الرفض في حال رفض المشرف للورقة
+                        'id'          => (int) $doc->id,
+                        'doc_type'    => $doc->doc_type,
+                        'file_url'    => $doc->file_url ? asset($doc->file_url) : null,
+                        'status'      => $doc->status,
+                        'feedback'    => $doc->feedback,
+                        'uploaded_at' => $doc->uploaded_at,
                     ];
                 }) : [],
-
-                // التواريخ الزمنية للسجل
-                'created_at' => $this->created_at?->toDateTimeString(),
-                'updated_at' => $this->updated_at?->toDateTimeString(),
             ];
 
         } catch (Exception $e) {
-            // معالجة استباقية وحماية في حال حدوث عطل غير متوقع أثناء معالجة البيانات وتحويل الأنواع (Type Casting)
-            Log::error("DriverResource Data Formatting Error: " . $e->getMessage(), [
-                'driver_id' => $this->id ?? 'N/A'
-            ]);
-
-            return [
-                'error'   => true,
-                'message' => 'حدث خطأ تقني أثناء تنسيق بيانات السائق للاستجابة.',
-                'debug'   => config('app.debug') ? $e->getMessage() : null
-            ];
+            Log::error("DriverResource Error: " . $e->getMessage());
+            return ['error' => true, 'message' => 'تعذر تنسيق بيانات السائق الشخصية.'];
         }
     }
 }

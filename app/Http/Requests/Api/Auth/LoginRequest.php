@@ -22,7 +22,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'phone_number' => ['required', 'regex:/^09[0-9]{8}$/'],
-            'password'     => ['required', 'string', Password::min(6)->letters()],
+            'password'     => ['required', 'string'],
             'device_name'  => ['nullable', 'string'], // تحول إلى nullable لضمان عدم انهيار التطبيق
             'platform'     => ['required', 'string', 'in:ios,android,web'] // فحص المنصات المدعومة بدقة
         ];
@@ -41,9 +41,7 @@ class LoginRequest extends FormRequest
             // --- تدقيق حقل كلمة المرور ---
             'password.required' => 'يرجى إدخال حقل الرقم السري.',
             'password.string'   => 'كلمة المرور يجب أن تكون نصاً صالحاً.',
-            'password.min'      => 'كلمة المرور ضعيفة جداً، يجب أن تكون 6 خانات أو أكثر.',
-            'password.letters'  => ' يجب أن تحتوي كلمة المرور على حرف واحد على الأقل.',
-
+            
           
             // --- تدقيق حقل اسم الجهاز ---
             'device_name.string'   => 'اسم الجهاز خطأ.',

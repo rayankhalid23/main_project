@@ -3,96 +3,104 @@
 namespace App\Http\Controllers\Api\Driver;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Driver\RegisterDriverRequest;
+use App\Http\Requests\Api\Driver\RegisterAccountRequest;
+use App\Http\Requests\Api\Driver\CompleteProfileRequest;
+use App\Http\Requests\Api\Driver\ProfileUpdateRequest; 
+use App\Http\Requests\Api\Shared\OtpRequest;
 use App\Services\Driver\DriverRegisterService;
+use App\Services\Shared\OtpService;
 use App\Http\Resources\Api\Driver\DriverResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Exception;
 
 class DriverRegisterController extends Controller
 {
     protected DriverRegisterService $registerService;
+    protected OtpService $otpService;
 
-    /**
-     * حقن الـ Service داخل الـ Controller عبر الـ Constructor Injection
-     */
-    public function __construct(DriverRegisterService $registerService)
+    public function __construct(DriverRegisterService $registerService, OtpService $otpService)
     {
         $this->registerService = $registerService;
+        $this->otpService = $otpService;
     }
 
     /**
-     * استقبال طلب تسجيل السائق، معالجة الملفات، واستدعاء الخدمة
-     *
-     * @param RegisterDriverRequest $request
-     * @return JsonResponse
+     * الخطوة 1: طلب تسجيل الحساب وإرسال الـ OTP (دون الحفظ في قاعدة البيانات)
      */
-    public function register(RegisterDriverRequest $request): JsonResponse
+    public function registerAccount(RegisterAccountRequest $request): JsonResponse
     {
         try {
-            // جلب البيانات التي تم التحقق منها بالكامل من الـ Request
-            $validatedData = $request->validated();
+            $data = $request->validated();
+            
+            // استدعاء الدالة الجديدة لإرسال الـ OTP فقط لحماية النظام من البيانات الوهمية
+            $this->registerService->sendVerificationOtp($data);
 
-            // مصفوفة لتخزين المسارات النهائية للملفات المرفوعة (لتسهيل مسحها في حال فشل النظام لاحقاً)
-            $uploadedPaths = [];
-
-            // 1. معالجة وتخزين الصورة الشخصية (إن وُجدت)
-            if ($request->hasFile('avatar_url')) {
-                $avatarPath = $request->file('avatar_url')->store('uploads/drivers/avatars', 'public');
-                $validatedData['avatar_path'] = 'storage/' . $avatarPath;
-                $uploadedPaths[] = $avatarPath;
-            }
-
-            // 2. معالجة وتخزين صورة المركبة (إجبارية)
-            $vehiclePath = $request->file('vehicle_image_url')->store('uploads/drivers/vehicles', 'public');
-            $validatedData['vehicle_image_path'] = 'storage/' . $vehiclePath;
-            $uploadedPaths[] = $vehiclePath;
-
-            // 3. معالجة وتخزين الوثائق والمستندات الرسمية الأربعة (إجبارية)
-            $documentFields = [
-                'doc_license'         => 'doc_license_path',
-                'doc_logbook'         => 'doc_logbook_path',
-                'doc_insurance'       => 'doc_insurance_path',
-                'doc_criminal_record' => 'doc_criminal_record_path'
-            ];
-
-            foreach ($documentFields as $fileInput => $arrayKey) {
-                $storedPath = $request->file($fileInput)->store('uploads/drivers/documents', 'public');
-                $validatedData[$arrayKey] = 'storage/' . $storedPath;
-                $uploadedPaths[] = $storedPath;
-            }
-
-            // 4. تمرير البيانات المجهزة بالمسارات إلى الـ Service لإدخالها في قاعدة البيانات
-            $driver = $this->registerService->register($validatedData);
-
-            // 5. إرجاع استجابة نجاح موحدة واحترافية للموبايل
             return response()->json([
                 'status'  => true,
-                'message' => 'تم استلام طلب التسجيل بنجاح! حسابك بانتظار مراجعة وتدقيق المشرف حالياً لتفعيله.',
-                'data'    => new DriverResource($driver)
-            ], 201); // 201 Created
+                'message' => 'تم إرسال رمز التحقق (OTP) إلى بريدك الإلكتروني بنجاح.',
+            ], 200);
 
         } catch (Exception $e) {
-            // تكتيك تنظيف متقدم: في حال فشل إدخال البيانات بعد رفع الملفات، نقوم بمسح الصور المرفوعة فوراً لمنع تراكم الملفات المهملة بالسيرفر
-            if (!empty($uploadedPaths)) {
-                foreach ($uploadedPaths as $path) {
-                    Storage::disk('public')->delete($path);
-                }
+            Log::error("Account Registration OTP Error: " . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'فشل إرسال رمز التحقق.'], 500);
+        }
+    }
+
+    /**
+     * الخطوة 2: التحقق من رمز OTP وإنشاء الحساب وتفعيله فوراً
+     */
+    public function verifyOtp(OtpRequest $request): JsonResponse
+    {
+        try {
+            // 1. التحقق من صحة الـ OTP
+            $result = $this->otpService->verify($request->email, $request->otp, 'REGISTER');
+            
+            if (!$result['success']) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => $result['message']
+                ], 400);
             }
 
-            // تسجيل الخطأ الفني في الـ Log
-            Log::error("Driver Registration Controller Error: " . $e->getMessage(), [
-                'phone_number' => $request->input('phone_number') ?? 'N/A'
-            ]);
+            // 2. إذا كان الرمز صحيحاً، نقوم بإنشاء الحساب وتفعيله مباشرة
+            // ملاحظة تهمك كمطور: يجب على تطبيق الموبايل إرسال بيانات التسجيل كاملة مع الـ OTP لتتم العملية في خطوة واحدة
+            $user = $this->registerService->registerAccountAfterOtp($request->all());
+            
+            // 3. إنشاء توكن الدخول المباشر للحساب الجديد المفعّل
+            $token = $user->createToken('driver_token')->plainTextToken;
 
-            // إرجاع رد خطأ موحد ومحمي للمستخدم
             return response()->json([
-                'status'  => false,
-                'message' => 'تعذر إتمام عملية التسجيل بسبب مشكلة تقنية داخلية بالنظام.',
-                'error'   => config('app.debug') ? $e->getMessage() : null
-            ], 500);
+                'status'  => true,
+                'message' => 'تم تفعيل الحساب وإنشاؤه بنجاح.',
+                'user_id' => $user->id,
+                'token'   => $token
+            ], 201);
+
+        } catch (Exception $e) {
+            Log::error("OTP Verification & Creation Error: " . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'فشل التحقق وإنشاء الحساب.'], 500);
+        }
+    }
+
+    /**
+     * المرحلة الثانية: إكمال ملف السائق (المركبة + الوثائق) لأول مرة
+     */
+    public function completeProfile(CompleteProfileRequest $request, int $userId): JsonResponse
+    {
+        try {
+            // تمرير البيانات المفلترة والمفحوصة بالكامل إلى الـ Service
+            $driver = $this->registerService->completeProfile($userId, $request->validated());
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم رفع البيانات بنجاح، بانتظار مراجعة الإدارة.',
+                'data'    => new DriverResource($driver)
+            ], 200);
+
+        } catch (Exception $e) {
+            Log::error("Complete Profile Error: " . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'فشل إكمال الملف الشخصي للمركبة والمستندات.'], 500);
         }
     }
 }

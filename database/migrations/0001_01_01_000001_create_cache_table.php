@@ -31,20 +31,31 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id(); // BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY
             $table->string('full_name', 150);
-            $table->string('phone_number', 20)->unique();
+            $table->string('email', 100)->unique();
+            
+            // أرقام الهواتف
+            $table->string('phone_number', 20)->unique(); // رقم الهاتف الأساسي
+            $table->string('alternative_phone', 20)->nullable(); // رقم هاتف احتياطي (اختياري)
+        
             $table->string('password_hash', 255);
             $table->string('avatar_url', 500)->nullable();
             $table->integer('role_id'); // متطابق مع نوع جدول الأدوار
             $table->tinyInteger('is_active')->default(1);
-            $table->tinyInteger('phone_verified')->default(0);
+            
+            $table->timestamp('email_verified_at')->nullable();
+            $table->timestamp('phone_verified_at')->nullable(); // توثيق الهاتف
             $table->timestamp('last_login_at')->nullable();
-            $table->string('alternative_phone', 20)->nullable();
+            
+            // [تمت إزالة حقل alternative_email من هنا بالكامل]
+            
             $table->timestamps(); // ينشئ automatically created_at و updated_at
             $table->softDeletes(); // ينشئ automatically deleted_at للـ Soft Delete
-
-            // القيود والفهارس
+        
+            // القيود والفهارس (Indexes & Foreign Keys)
             $table->foreign('role_id')->references('id')->on('roles')->onDelete('restrict')->onUpdate('cascade');
-            $table->index('phone_number');
+            
+            $table->index('email');
+            $table->index('phone_number'); // فهرسة الهاتف لتسريع عمليات البحث
             $table->index('role_id');
             $table->index('is_active');
         });
@@ -54,17 +65,19 @@ return new class extends Migration
         // =====================================================
         Schema::create('otp_codes', function (Blueprint $table) {
             $table->id();
-            $table->string('phone_number', 20);
+            // تغيير phone_number إلى email مع زيادة الطول ليتسع للإيميلات الطويلة
+            $table->string('email', 100); 
             $table->string('code_hash', 255);
-            $table->enum('purpose', ['REGISTER', 'LOGIN', 'RESET_PASSWORD', 'VERIFY_PHONE']);
+            $table->enum('purpose', ['REGISTER', 'LOGIN', 'RESET_PASSWORD', 'VERIFY_EMAIL']); // تحديث الاسم ليكون منطقياً
             $table->timestamp('expires_at');
-            $table->tinyInteger('is_used')->default(0);
+            $table->boolean('is_used')->default(false); // استخدام boolean أفضل وأوضح
             $table->tinyInteger('attempts')->default(0);
             $table->timestamp('created_at')->useCurrent();
-
-            $table->index('phone_number');
+        
+            // تحديث الفهارس (Indexes) لتتوافق مع العمود الجديد
+            $table->index('email');
             $table->index('expires_at');
-            $table->index(['phone_number', 'purpose', 'is_used']);
+            $table->index(['email', 'purpose', 'is_used']);
         });
 
         // =====================================================
@@ -130,10 +143,16 @@ return new class extends Migration
         Schema::create('drivers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->unique()->constrained('users')->onDelete('cascade')->onUpdate('cascade');
-            $table->string('national_id', 50)->unique();
-            $table->string('license_number', 50)->unique();
-            $table->date('license_expiry');
-            $table->enum('status', ['Pending', 'Approved', 'Suspended','Rejected', 'Offline', 'ON_TRIP'])->default('Pending');
+            
+            // التعديل: جعل الحقول التي تدخل في المرحلة الثانية اختيارية
+            $table->string('national_id', 50)->unique()->nullable(); 
+            $table->string('license_number', 50)->unique()->nullable();
+            $table->date('license_expiry')->nullable();
+            
+            // التعديل: القيمة الافتراضية يجب أن تتوافق مع منطق التسجيل (Offline هو الأفضل)
+            $table->enum('status', ['Pending', 'Approved', 'Suspended', 'Rejected', 'Offline', 'ON_TRIP'])->default('Offline');
+            $table->enum('gender', ['male', 'female'])->default('male');
+            
             $table->decimal('current_lat', 10, 8)->nullable();
             $table->decimal('current_lng', 11, 8)->nullable();
             $table->timestamp('last_ping_at')->nullable();
@@ -144,7 +163,7 @@ return new class extends Migration
             $table->integer('cancelled_by_driver_count')->default(0);
             $table->integer('cancelled_by_parent_count')->default(0);
             $table->decimal('retention_rate', 5, 2)->default(100.00);
-
+        
             $table->index('status');
             $table->index(['current_lat', 'current_lng']);
             $table->index('last_ping_at');
@@ -293,6 +312,24 @@ return new class extends Migration
             $table->text('clause_text'); 
             
             $table->timestamps();
+        });
+
+        // =====================================================
+        // [ 15 ] جدول طلبات تعديل البيانات الحساسة للسائقين (driver_profile_changes)
+        // =====================================================
+        Schema::create('driver_profile_changes', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade')->onUpdate('cascade');
+            $table->json('old_values'); // قيم الحقول القديمة قبل التغيير للمقارنة
+            $table->json('new_values'); // قيم الحقول الجديدة المطلوبة للتحديث
+            $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->string('rejection_reason', 500)->nullable(); // سبب الرفض إن وجد
+            $table->foreignId('action_by')->nullable()->constrained('admins')->onDelete('restrict'); // الأدمن المسؤول عن القرار
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('action_at')->nullable(); // وقت اتخاذ قرار القبول أو الرفض
+
+            $table->index('driver_id');
+            $table->index('status');
         });
 
         // =====================================================
@@ -614,26 +651,53 @@ return new class extends Migration
         Schema::enableForeignKeyConstraints();
     }
 
-    /**
+   /**
      * Reverse the migrations.
      */
     public function down(): void
     {
+        // إيقاف القيود مؤقتاً لضمان حذف الجداول بسلاسة وبدون ترتيب معقد للمفاتيح الأجنبية
         Schema::disableForeignKeyConstraints();
         
         $tables = [
-            'exceptions', 'sos_alerts', 'payment_confirmations', 'complaints', 'ratings',
-            'messages', 'trip_tracking', 'trip_events', 'trips', 'daily_route_overrides',
-            'subscriptions', 'routes', 'request_children', 'driver_documents', 'requests',
-            'notifications', 'children', 'schools', 'addresses', 'parents', 'vehicles',
-            'drivers', 'admins', 'user_devices', 'blacklisted_tokens', 'refresh_tokens',
-            'otp_codes', 'users', 'roles'
+            'driver_profile_changes', // الجدول الجديد لمراجعة بيانات السائقين الحساسة
+            'contracts',              // جدول العقود المبرمة بين الأطراف
+            'exceptions', 
+            'sos_alerts', 
+            'payment_confirmations', 
+            'complaints', 
+            'ratings',
+            'messages', 
+            'trip_tracking', 
+            'trip_events', 
+            'trips', 
+            'daily_route_overrides',
+            'subscriptions', 
+            'routes', 
+            'request_children', 
+            'driver_documents', 
+            'requests',
+            'notifications', 
+            'children', 
+            'schools', 
+            'addresses', 
+            'parents', 
+            'vehicles',
+            'drivers', 
+            'admins', 
+            'user_devices', 
+            'blacklisted_tokens', 
+            'refresh_tokens',
+            'otp_codes', 
+            'users', 
+            'roles'
         ];
 
         foreach ($tables as $table) {
             Schema::dropIfExists($table);
         }
 
+        // إعادة تفعيل القيود بعد اكتمال عملية التصفير بأمان
         Schema::enableForeignKeyConstraints();
     }
 };

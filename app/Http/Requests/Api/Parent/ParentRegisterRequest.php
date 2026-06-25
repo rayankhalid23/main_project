@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Api\Parent;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;             // تأكد من إضافة هذا السطر
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class ParentRegisterRequest extends FormRequest
@@ -16,52 +16,63 @@ class ParentRegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // الاسم: يشترط أن يكون نصاً لا يقل عن 3 أحرف
-            'full_name'    => 'required|string|min:3',
-            
-            // الهاتف: يجب أن يكون 10 خانات، يبدأ بـ 09، وأرقام فقط
-            'phone_number' => 'required|digits:10|starts_with:09|unique:users,phone_number',
-            
-            // كلمة المرور: لا تقل عن 7 خانات، تحتوي على أرقام وحروف، يمنع الرموز
-            'password'     => 'required|string|min:7|regex:/^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*[!@#$%^&*]).+$/',
-            
-            // تأكيد كلمة المرور
+            'full_name'             => 'required|string|min:3',
+            'email'                 => 'required|email|unique:users,email',
+            'phone_number'          => 'required|string|min:7|unique:users,phone_number',
+            'alternative_phone'     => 'nullable|string|min:7',
+            'password'              => 'required|string|min:7|regex:/^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*[!@#$%^&*]).+$/',
             'password_confirmation' => 'required|same:password',
-            
-            // كود التحقق: أرقام فقط وبطول 6 خانات
-            'otp'          => 'required|numeric|digits:6'
+            'otp'                   => 'required|numeric|digits:6'
+
+            'device_name'           => 'nullable|string',
+            'platform'              => 'nullable|string',
+            'fcm_token'             => 'nullable|string'
         ];
     }
 
     public function messages(): array
     {
         return [
-            'full_name.required'    => 'الرجاء إدخال الاسم الكامل.',
-            'full_name.min'         => 'الاسم يجب أن يتكون من 3 أحرف على الأقل.',
+            // الاسم
+            'full_name.required'         => 'عذراً، خانة الاسم الكامل لا يمكن أن تكون فارغة.',
+            'full_name.min'              => 'الاسم يجب أن يتكون من 3 أحرف على الأقل.',
             
-            'phone_number.required' => 'رقم الهاتف مطلوب.',
-            'phone_number.digits'   => 'رقم الهاتف يجب أن يتكون من 10 أرقام بالضبط.',
-            'phone_number.starts_with' => 'رقم الهاتف يجب أن يبدأ بـ 09.',
-            'phone_number.unique'   => 'عذراً، هذا الرقم مسجل مسبقاً في النظام.',
+            // البريد الإلكتروني (تم تعديل رسالة المكرر بناءً على طلبك)
+            'email.required'             => 'عذراً، خانة البريد الإلكتروني لا يمكن أن تكون فارغة.',
+            'email.email'                => 'صيغة البريد الإلكتروني غير صحيحة، يرجى كتابته بشكل سليم.',
+            'email.unique'               => 'هذا البريد الإلكتروني مسجل لدينا بالفعل. هل نسيت كلمة المرور؟ يمكنك استعادتها مباشرة.',
             
-            'password.required'     => 'كلمة المرور مطلوبة.',
-            'password.min'          => 'كلمة المرور يجب ألا تقل عن 7 خانات.',
-            'password.regex'        => 'كلمة المرور يجب أن تحتوي على أرقام وحروف، ويُمنع استخدام الرموز.',
+            // كلمة المرور
+            'password.required'          => 'برجاء إدخال كلمة المرور، لا يمكن ترك الخانة فارغة.',
+            'password.min'               => 'كلمة المرور يجب ألا تقل عن 7 خانات لحماية حسابك.',
+            'password.regex'             => 'كلمة المرور يجب أن تحتوي على أرقام وحروف، ويُمنع استخدام الرموز الخاصة.',
             
-            'password_confirmation.same' => 'تأكيد كلمة المرور لا يطابق كلمة المرور المدخلة.',
+            // تأكيد كلمة المرور (إضافة الرسالة المفقودة)
+            'password_confirmation.required' => 'برجاء تأكيد كلمة المرور، لا يمكن ترك الخانة فارغة.',
+            'password_confirmation.same'     => 'تأكيد كلمة المرور لا يطابق كلمة المرور المدخلة.',
             
-            'otp.required'          => 'كود التحقق مطلوب.',
-            'otp.numeric'           => 'كود التحقق يجب أن يحتوي على أرقام فقط.',
-            'otp.digits'            => 'كود التحقق يجب أن يتكون من 6 أرقام.'
+            // كود التحقق (OTP)
+            'otp.required'               => 'برجاء إدخال رمز التحقق، لا يمكن ترك الخانة فارغة.',
+            'otp.numeric'                => 'عذراً، يجب أن يتكون رمز التحقق من أرقام فقط (يُمنع استخدام الحروف أو الرموز).',
+            'otp.digits'                 => 'يجب أن يتكون رمز التحقق من 6 أرقام بالضبط.',
+
+            // رقم الهاتف (الرسائل المخصصة الجديدة)
+            'phone_number.required'      => 'عذراً، خانة رقم الهاتف الأساسي لا يمكن أن تكون فارغة.',
+            'phone_number.min'           => 'رقم الهاتف يجب ألا يقل عن 7 أرقام.',
+            'phone_number.unique'        => 'رقم الهاتف هذا مسجل لدينا بالفعل لحساب آخر، يرجى استخدام رقم مختلف أو تسجيل الدخول.'
         ];
     }
 
+    /**
+     * توحيد تنسيق أخطاء الـ API تماشياً مع معايير مشروع Darby
+     */
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(response()->json([
-            'status'  => false,
-            'message' => 'بيانات غير صالحة.',
-            'errors'  => $validator->errors()
+            'status'     => false,
+            'error_code' => 'VALIDATION_ERROR',
+            'message'    => 'خطأ في البيانات المرسلة، يرجى تصحيح الحقول وإعادة المحاولة.',
+            'errors'     => $validator->errors()
         ], 422));
     }
 }

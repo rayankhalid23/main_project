@@ -13,10 +13,28 @@ class StoreAddressRequest extends FormRequest
 
     public function rules(): array
     {
+        $parentId = 1; // سيتم استبدالها بـ auth()->user()->parent->id لاحقاً
+
         return [
-            'label'      => 'required|string|max:100',
-            'lat'        => 'required|numeric|between:-90,90',
-            'lng'        => 'required|numeric|between:-180,180',
+            'label' => [
+                'required',
+                'string',
+                'max:100',
+                // شرط ديناميكي: يمنع تكرار الاسم لنفس ولي الأمر عند الإضافة
+                \Illuminate\Validation\Rule::unique('addresses', 'label')->where(function ($query) use ($parentId) {
+                    return $query->where('parent_id', $parentId);
+                })
+            ],
+            'lat' => [
+                'required',
+                'numeric',
+                'between:-90,90',
+                // شرط ديناميكي مشترك: يمنع تكرار نفس الإحداثيات لنفس ولي الأمر
+                \Illuminate\Validation\Rule::unique('addresses', 'lat')->where(function ($query) use ($parentId) {
+                    return $query->where('parent_id', $parentId)->where('lng', $this->lng);
+                })
+            ],
+            'lng' => 'required|numeric|between:-180,180',
             'is_default' => 'nullable|boolean'
         ];
     }
@@ -25,8 +43,12 @@ class StoreAddressRequest extends FormRequest
     {
         return [
             'label.required' => 'يرجى تحديد مسمى للعنوان (مثل: المنزل، بيت الجد).',
-            'lat.required'   => 'إحداثيات خط العرض مطلوبة.',
-            'lng.required'   => 'إحداثيات خط الطول مطلوبة.',
+            'label.unique'   => 'لديك عنوان مسجل مسبقاً بنفس هذا الاسم، يرجى اختيار اسم آخر.',
+            'lat.required'   => 'إحداثيات خط العرض مطلوبة لتعيين الموقع على الخريطة.',
+            'lat.unique'     => 'هذا الموقع الجغرافي (الإحداثيات) مضاف لديك بالفعل في قائمة عناوينك.',
+            'lng.required'   => 'إحداثيات خط الطول مطلوبة لتعيين الموقع على الخريطة.',
+            'lat.between'    => 'إحداثيات خط العرض المرسلة غير صالحة جغرافياً.',
+            'lng.between'    => 'إحداثيات خط الطول المرسلة غير صالحة جغرافياً.',
         ];
     }
 }

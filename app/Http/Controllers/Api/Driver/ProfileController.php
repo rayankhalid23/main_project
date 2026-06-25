@@ -7,6 +7,7 @@ use App\Http\Requests\Api\Driver\ProfileUpdateRequest;
 use App\Services\Driver\DriverProfileService;
 use App\Http\Resources\Api\Driver\DriverResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Exception;
@@ -21,112 +22,184 @@ class ProfileController extends Controller
     }
 
     /**
-     * تحديث بيانات الملف الشخصي للسائق
-     *
-     * @param ProfileUpdateRequest $request
-     * @return JsonResponse
+     * 1. تحديث بيانات الملف الشخصي للسائق (PATCH/POST)
      */
     public function update(ProfileUpdateRequest $request): JsonResponse
     {
+        $uploadedPaths = [];
         try {
             $user = auth()->user();
-$driver = $user->driver; // جلب العلاقة
-
-if (!$driver) {
-    return response()->json([
-        'status' => false,
-        'message' => 'عذراً، هذا الحساب غير مرتبط بملف سائق.'
-    ], 404);
-}
             $validatedData = $request->validated();
-            
-            $uploadedPaths = [];
 
-            // معالجة وتحديث الصورة الشخصية إذا تم إرسالها في الطلب
-            if ($request->hasFile('avatar_url')) {
-                // مسح الصورة القديمة لتوفير المساحة على السيرفر (Best Practice)
-                if ($user->avatar_url && Storage::disk('public')->exists(str_replace('storage/', '', $user->avatar_url))) {
-                    Storage::disk('public')->delete(str_replace('storage/', '', $user->avatar_url));
+            if ($request->hasFile('avatar')) {
+                if ($user->avatar_url) {
+                    $oldPath = str_replace('storage/', '', $user->avatar_url);
+                    Storage::disk('public')->delete($oldPath);
                 }
 
-                $avatarPath = $request->file('avatar_url')->store('uploads/drivers/avatars', 'public');
-                $validatedData['avatar_path'] = 'storage/' . $avatarPath;
+                $avatarPath = $request->file('avatar')->store('drivers/avatars', 'public');
+                $validatedData['avatar_url'] = 'storage/' . $avatarPath; 
                 $uploadedPaths[] = $avatarPath;
             }
 
-            // تمرير البيانات للـ Service للقيام بعملية التحديث
-            $updatedDriver = $this->profileService->updateProfile($user, $validatedData);
+            // استدعاء الخدمة لتحديث البيانات الشخصية الفورية أو حجز الحساسة
+            $result = $this->profileService->updateDriverProfile($user->id, $validatedData);
 
             return response()->json([
                 'status'  => true,
-                'message' => 'تم تحديث بيانات الملف الشخصي بنجاح.',
-                'data'    => new DriverResource($updatedDriver)
-            ], 200); // 200 OK
+                'message' => $result['message'],
+                'data'    => new DriverResource($result['driver'])
+            ], 200);
 
         } catch (Exception $e) {
-            // في حال الفشل نقوم بمسح الصورة الجديدة التي تم رفعها للتو
-            if (!empty($uploadedPaths)) {
-                foreach ($uploadedPaths as $path) {
-                    Storage::disk('public')->delete($path);
-                }
+            foreach ($uploadedPaths as $path) {
+                Storage::disk('public')->delete($path);
             }
 
-            Log::error("Driver Profile Update Controller Error: " . $e->getMessage(), [
-                'user_id' => auth()->id() ?? 'N/A'
-            ]);
+            Log::error("Driver Profile Update Error: " . $e->getMessage(), ['user_id' => auth()->id()]);
 
             return response()->json([
                 'status'  => false,
-                'message' => 'تعذر تحديث البيانات بسبب مشكلة تقنية.',
-                'error'   => config('app.debug') ? $e->getMessage() : null
+                'message' => $e->getMessage() ?: 'تعذر تحديث البيانات بسبب مشكلة تقنية.',
             ], 500);
         }
     }
 
-
     /**
-     * عرض بيانات الملف الشخصي للسائق
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return JsonResponse
+     * 2. عرض بيانات الملف الشخصي للسائق بالكامل مع ملحقاته
      */
-    public function show(\Illuminate\Http\Request $request): JsonResponse
+    public function show(): JsonResponse
     {
         try {
-            // [احترافي]: استخدام Eager Loading لتحميل علاقة السائق دفعة واحدة من قاعدة البيانات
-            // هذا يمنع لارافيل من تنفيذ استعلام إضافي عند استدعاء $user->driver لاحقاً
-            $user = $request->user();
-            $driver = $user->driver;
+            $user = auth()->user();
+            
+            $driver = $user->driver()->with(['vehicles', 'documents'])->first();
 
-            // حارس الحماية (Guard Clause) للتأكد من وجود السائق
             if (!$driver) {
                 return response()->json([
-                    'status' => false,
-                    'error_code' => 'DRIVER_NOT_FOUND',
-                    'message' => 'عذراً، هذا الحساب غير مرتبط بملف سائق.'
+                    'status'  => false,
+                    'message' => 'عذراً، هذا الحساب غير مرتبط بملف سائق نشط على النظام.'
                 ], 404);
             }
-            $driver->load(['vehicles', 'documents']);
+
             return response()->json([
                 'status'  => true,
-                'message' => 'تم جلب بيانات الملف الشخصي بنجاح.',
-                // نمرر البيانات للـ Resource ليتولى هو عملية التنسيق (Formatting)
+                'message' => 'تم جلب البيانات بنجاح.',
                 'data'    => new DriverResource($driver)
             ], 200);
 
         } catch (Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Driver Profile Fetch Error: " . $e->getMessage(), [
-                'user_id' => auth()->id() ?? 'N/A'
-            ]);
+            Log::error("Driver Profile Fetch Error: " . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'حدث خطأ أثناء جلب الملف الشخصي.'], 500);
+        }
+    }
 
+    /**
+     * 3. تفعيل واعتماد البريد الإلكتروني الجديد من الرابط الموقّع
+     */
+    public function approveEmailChange(int $id): JsonResponse
+    {
+        try {
+            $this->profileService->approveEmailChange($id);
+            
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم تأكيد وتحديث البريد الإلكتروني بنجاح في النظام.'
+            ], 200);
+        } catch (Exception $e) {
             return response()->json([
                 'status'  => false,
-                'error_code' => 'SERVER_ERROR',
-                'message' => 'تعذر جلب البيانات بسبب مشكلة تقنية.',
-                'error'   => config('app.debug') ? $e->getMessage() : null
+                'message' => $e->getMessage() ?: 'رابط التأكيد غير صالح أو منتهي الصلاحية.'
+            ], 400);
+        }
+    }
+
+    /**
+     * 4. إلغاء طلب تعديل البريد الإلكتروني القادم من الرابط الموقّع
+     */
+    public function rejectEmailChange(int $id): JsonResponse
+    {
+        try {
+            $this->profileService->rejectEmailChange($id);
+            
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم إلغاء طلب تغيير البريد الإلكتروني بنجاح.'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * 5. تحديث وتجديد المستندات والوثائق الرسمية للسائق
+     */
+    public function updateLegalData(Request $request): JsonResponse
+    {
+        try {
+            $validatedData = $request->validate([
+                'national_id'               => 'required|string',
+                'license_number'             => 'required|string',
+                'license_expiry'             => 'required|date',
+                'doc_license_path'           => 'required|string',
+                'doc_logbook_path'           => 'required|string',
+                'doc_insurance_path'         => 'required|string',
+                'doc_criminal_record_path'   => 'required|string',
+            ]);
+
+            $user = auth()->user();
+            $result = $this->profileService->updateLegalDocuments($user->id, $validatedData);
+
+            return response()->json([
+                'status'  => true,
+                'message' => $result['message']
+            ], 200);
+
+        } catch (Exception $e) {
+            Log::error("Driver Legal Data Update Error: " . $e->getMessage());
+            return response()->json([
+                'status'  => false,
+                'message' => $e->getMessage() ?: 'حدث خطأ أثناء تحديث البيانات القانونية.'
             ], 500);
         }
     }
 
-    
+    /**
+     * 6. تحديث بيانات وتفاصيل المركبة وتجميدها لحين مراجعة الأدمن
+     */
+    public function updateVehicle(Request $request, $vehicleId): JsonResponse
+    {
+        try {
+            $validatedData = $request->validate([
+                'has_ac'             => 'nullable|boolean',
+                'plate_number'       => 'nullable|string',
+                'brand'              => 'nullable|string',
+                'model'              => 'nullable|string',
+                'year'               => 'nullable|integer',
+                'color'              => 'nullable|string',
+                'type'               => 'nullable|string',
+                'capacity_manual'    => 'nullable|integer',
+                'vehicle_image_path' => 'nullable|string',
+            ]);
+
+            $user = auth()->user();
+            $vehicle = $this->profileService->updateVehicleDetails($user->id, (int)$vehicleId, $validatedData);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم تحديث تفاصيل المركبة بنجاح، وهي قيد المراجعة والتدقيق الآن من قبل الإدارة.',
+                'data'    => $vehicle
+            ], 200);
+
+        } catch (Exception $e) {
+            Log::error("Driver Vehicle Update Error: " . $e->getMessage());
+            return response()->json([
+                'status'  => false,
+                'message' => $e->getMessage() ?: 'حدث خطأ أثناء تحديث بيانات المركبة.'
+            ], 500);
+        }
+    }
 }

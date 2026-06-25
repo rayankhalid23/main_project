@@ -5,102 +5,78 @@ namespace App\Http\Requests\Api\Driver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Support\Facades\Log;
-use Exception;
+use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
-    /**
-     * تحديد صلاحية المستخدم (يجب أن يكون مسجلاً للدخول)
-     */
     public function authorize(): bool
     {
-        // نفترض أن هذا المسار محمي بـ Middleware auth:sanctum
-        return auth()->check();
+        if (!auth()->check()) return false;
+        return auth()->user()->is_active !== 0; 
     }
 
-    /**
-     * قواعد التحقق للتعديل الجزئي (Partial Update)
-     * استخدام 'sometimes' هو السر هنا: يتم التحقق فقط إذا تم إرسال الحقل.
-     */
     public function rules(): array
     {
-        // جلب معرف المستخدم الحالي لاستثنائه من قواعد الـ unique
         $userId = auth()->id();
-        
-        // جلب معرف السائق المرتبط بالمستخدم الحالي (لاستثناء رقم الرخصة والبطاقة)
-        $driverId = auth()->user()->driver->id ?? null;
 
         return [
-            // --- بيانات الحساب ---
             'full_name' => [
-                'sometimes', // <--- هذا يعني: تحقق فقط إذا تم إرسال الحقل
-                'required',
-                'string',
-                'regex:/^[\p{L} ]+/u',
+                'sometimes', 'string', 'min:10', 'max:100', 'regex:/^[\p{L} ]+/u',
                 function ($attribute, $value, $fail) {
                     $words = explode(' ', trim(preg_replace('/\s+/', ' ', $value)));
                     if (count($words) < 3) {
                         $fail('يجب إدخال الاسم الثلاثي بالكامل.');
                     }
                 },
+                Rule::unique('users', 'full_name')->ignore($userId),
+            ],
+            'email' => [
+                'sometimes', 'email',
+                Rule::unique('users', 'email')->ignore($userId)
             ],
             'phone_number' => [
-                'sometimes',
-                'required',
-                'digits:10',
-                'regex:/^09[0-9]{8}$/',
-                // استثناء المستخدم الحالي من قاعدة التحقق لتجنب خطأ التكرار
-                'unique:users,phone_number,' . $userId
+                'sometimes', 'numeric', 'digits:10', 'regex:/^09/',
+                Rule::unique('users', 'phone_number')->ignore($userId)
+            ],
+            'alternative_phone' => [
+                'nullable', 'numeric', 'digits:10', 'regex:/^09/',
+                Rule::unique('users', 'alternative_phone')->ignore($userId)
             ],
             'password' => [
-                'sometimes',
-                'required',
-                'min:6',
-                'regex:/[a-zA-Z]/',
-                'regex:/[0-9]/',
+                'nullable', 'string', 'min:6', 'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/'
             ],
-            'avatar_url' => 'sometimes|nullable|image|mimes:jpeg,png,jpg|max:2048',
-
-            // --- بيانات السائق (يمكنك إزالة ما لا ترغب للسائق بتعديله بنفسه) ---
-            'national_id' => [
-                'sometimes',
-                'required',
-                'digits:12',
-                'regex:/^[12][0-9]{11}$/',
-                'unique:drivers,national_id,' . $driverId
-            ],
-            'license_number' => [
-                'sometimes',
-                'required',
-                'regex:/^[0-9]+$/',
-                'unique:drivers,license_number,' . $driverId
-            ],
-            'license_expiry' => 'sometimes|required|date|after:today',
+            'gender' => ['sometimes', 'in:male,female'],
+            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048']
         ];
     }
 
-    /**
-     * رسائل الخطأ المخصصة (نفس أسلوبك السابق)
-     */
     public function messages(): array
     {
         return [
-            'full_name.required' => 'حقل الاسم لا يمكن أن يكون فارغاً إذا أردت تعديله.',
-            'phone_number.unique'  => 'رقم الهاتف هذا مستخدم في حساب آخر.',
-            'avatar_url.image' => 'يجب أن يكون الملف المرفوع صورة.',
-            // ... يمكنك إضافة باقي الرسائل بنفس النمط
+            'full_name.min'            => 'يرجى إدخال الاسم الثلاثي على الأقل.',
+            'full_name.unique'         => 'هذا الاسم مسجل في النظام مسبقاً لحساب آخر.',
+            'email.email'              => 'تنسيق البريد الإلكتروني غير صحيح.',
+            'email.unique'             => 'هذا البريد الإلكتروني مستخدم بالفعل مسبقاً.',
+            'phone_number.digits'      => 'يجب أن يتكون رقم الهاتف من 10 أرقام بالضبط.',
+            'phone_number.regex'       => 'رقم الهاتف غير صحيح، يجب أن يبدأ بـ 09.',
+            'phone_number.unique'      => 'رقم الهاتف هذا مستخدم من قبل حساب آخر.',
+            'alternative_phone.digits' => 'يجب أن يتكون رقم الهاتف البديل من 10 أرقام بالضبط.',
+            'alternative_phone.regex'  => 'رقم الهاتف البديل غير صحيح، يجب أن يبدأ بـ 09.',
+            'alternative_phone.unique' => 'رقم الهاتف البديل هذا مستخدم من قبل حساب آخر.',
+            'password.min'             => 'يجب ألا تقل كلمة المرور المحدثة عن 6 خانات.',
+            'password.regex'           => 'كلمة المرور يجب أن تحتوي على حرف ورقم واحد على الأقل للأمان.',
+            'gender.in'                => 'القيمة المختارة للجنس غير صحيحة.',
+            'avatar.image'             => 'الملف المرفوع يجب أن يكون صورة صالحة.',
+            'avatar.mimes'             => 'يسمح فقط بالصور بصيغ jpeg, png, jpg.',
+            'avatar.max'               => 'حجم الصورة الشخصية يجب ألا يتجاوز 2 ميجابايت.',
         ];
     }
 
-    /**
-     * معالجة فشل التحقق (حماية النظام وإرجاع 422)
-     */
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(response()->json([
             'status'  => false,
-            'message' => 'فشل التحقق من البيانات، يرجى تصحيح الأخطاء أدناه.',
+            'message' => 'عذراً، البيانات المرسلة لتعديل الحساب تحتوي على أخطاء.',
             'errors'  => $validator->errors()
         ], 422));
     }

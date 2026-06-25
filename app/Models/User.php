@@ -7,9 +7,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens; 
+use App\Models\Role;
 use App\Models\Driver\Driver; 
 use App\Models\Admin\Admin;
-use App\Models\Parent\ParentModel; // تأكد من استدعاء المسار الصحيح
+use App\Models\Parent\ParentModel;
 
 class User extends Authenticatable
 {
@@ -17,17 +18,28 @@ class User extends Authenticatable
 
     protected $table = 'users';
 
-    // الطريقة التقليدية والمستقرة لتعريف الحقول
+    // *** التعديل 1: إخبار لارافيل بعدم استخدام timestamps التلقائية ***
+    public $timestamps = true;
+    const CREATED_AT = 'created_at';
+    const UPDATED_AT = 'updated_at'; // بحرف U كبير كما طلبته بدقة
+    const DELETED_AT = 'deleted_at';
+
     protected $fillable = [
         'full_name',
+        'email',
         'phone_number',
         'password_hash',
         'avatar_url',
         'role_id',
         'is_active',
         'phone_verified',
+        'email_verified_at',
+        'phone_verified_at',
         'alternative_phone',
-        'last_login_at'
+        'last_login_at',
+
+        'new_email_temporary',
+        'email_change_pending',
     ];
 
     protected $hidden = [
@@ -38,12 +50,16 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
-            'phone_verified' => 'boolean',
-            'last_login_at' => 'datetime',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
-            'deleted_at' => 'datetime',
+            'is_active'         => 'boolean',
+            'phone_verified'    => 'boolean',
+            'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
+            'last_login_at'     => 'datetime',
+            // *** التعديل 2: إزالة 'created_at', 'updated_at' لأننا ألغينا الـ timestamps ***
+            'created_at'        => 'datetime',
+            'Update_at'         => 'datetime',
+            'Delete_at'         => 'datetime',
+            'email_change_pending' => 'boolean',
         ];
     }
 
@@ -57,7 +73,6 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id');
     }
 
-    // علاقة الربط مع جدول أولياء الأمور
     public function parentProfile()
     {
         return $this->hasOne(ParentModel::class, 'user_id');
