@@ -7,38 +7,42 @@ use App\Http\Controllers\Api\Parent\AddressController;
 use App\Http\Controllers\Api\Parent\ParentSchoolController;
 use App\Http\Controllers\Api\Admin\ZoneController;
 use App\Http\Controllers\Api\Parent\ParentDriverSearchController;
+use App\Http\Controllers\Api\Admin\SchoolController;
 
 /*
 |--------------------------------------------------------------------------
-| Parent Routes
+| Parent Module Routes
 |--------------------------------------------------------------------------
+| ملاحظة هندسية: هذا الملف ممرر عبر الـ Prefix التلقائي (api/parent) 
+| من خلال ملف الإعدادات الأساسي bootstrap/app.php. لا تكرر الكلمة هنا.
 */
 
 // 1. مسارات المصادقة العامة والتحقق (بدون توكن)
-Route::prefix('parent')->group(function () {
-    Route::post('/send-otp', [ParentAuthController::class, 'sendOtp']);
-    Route::post('/register', [ParentAuthController::class, 'register']);
+Route::post('/send-otp', [ParentAuthController::class, 'sendOtp']);
+Route::post('/register', [ParentAuthController::class, 'register']);
 
-    /*
-     * 🚀 [إضافة هندسية هامة]: مسارات الروابط الموقّعة (Signed URLs) لتأكيد أو رفض تغيير البريد الإلكتروني لولي الأمر.
-     * تم وضعها هنا لأنها تُفتح مباشرة من صندوق الوارد (Email Inboxes) للمتصفح دون الحاجة لتوكن Bearer.
-     * محمية بالـ Middleware 'signed' المدمج في لارافل لمنع التلاعب بالـ ID أو الرابط.
-     */
-    Route::middleware('signed')->group(function () {
-        Route::get('/profile/email/approve/{id}', [ParentAuthController::class, 'approveEmailChange'])
-            ->name('parent.profile.email.approve');
-            
-        Route::get('/profile/email/reject/{id}', [ParentAuthController::class, 'rejectEmailChange'])
-            ->name('parent.profile.email.reject');
-    });
+/*
+ * روابط موقّعة (Signed URLs) لتأكيد أو رفض تغيير البريد الإلكتروني لولي الأمر.
+ * تفتح مباشرة من المتصفح محمية بالـ Middleware 'signed'
+ */
+Route::middleware('signed')->group(function () {
+    Route::get('/profile/email/approve/{id}', [ParentAuthController::class, 'approveEmailChange'])
+        ->name('parent.profile.email.approve');
+        
+    Route::get('/profile/email/reject/{id}', [ParentAuthController::class, 'rejectEmailChange'])
+        ->name('parent.profile.email.reject');
 });
 
+
 // 2. مسارات ولي الأمر المحمية (تتطلب تسجيل دخول وتوكن Sanctum)
-Route::middleware('auth:sanctum')->prefix('parent')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
     
     // إدارة الحساب الشخصي لولي الأمر
     Route::get('/profile', [ParentAuthController::class, 'getProfile']);
-    Route::post('/profile/update', [ParentAuthController::class, 'updateProfile']); // يدعم التعديل الجزئي المطور
+    Route::post('/profile/update', [ParentAuthController::class, 'updateProfile']); 
+    
+    // مسار جلب المدارس المعتمدة (الآن أصبح: api/parent/schools فوراً وبشكل صحيح)
+    Route::get('schools', [SchoolController::class, 'index']);
     
     // إدارة الأبناء والطلبة المضافين
     Route::prefix('children')->group(function () {
@@ -49,28 +53,21 @@ Route::middleware('auth:sanctum')->prefix('parent')->group(function () {
         Route::delete('/{id}', [ChildrenController::class, 'destroy']);
     });
 
-   // مسارات إدارة العناوين والمواقع الجغرافية لولي الأمر
-   Route::prefix('addresses')->group(function () {
-    Route::get('/', [AddressController::class, 'index']);
-    Route::post('/', [AddressController::class, 'store']);
+    // مسارات إدارة العناوين والمواقع الجغرافية لولي الأمر
+    Route::prefix('addresses')->group(function () {
+        Route::get('/', [AddressController::class, 'index']);
+        Route::post('/', [AddressController::class, 'store']);
+        Route::post('/{address}', [AddressController::class, 'update'])->withTrashed(); 
+        Route::delete('/{address}', [AddressController::class, 'destroy'])->withTrashed(); 
+    });
     
-    // أضفنا withTrashed لكي يستطيع لارافيل التعرف على السجل وتحديثه أو حذفه ناعماً بدون كراش 404
-    Route::post('/{address}', [AddressController::class, 'update'])->withTrashed(); 
-    Route::delete('/{address}', [AddressController::class, 'destroy'])->withTrashed(); 
-});
-    
-
-    // اقتراح مدرسة جديدة من قبل ولي الأمر للإدارة لمراجعتها
+    // اقتراح مدرسة جديدة من قبل ولي الأمر
     Route::post('/suggest-school', [ParentSchoolController::class, 'store']);
+    
     // جلب المناطق المتاحة بالنظام لولي الأمر
     Route::get('zones', [ZoneController::class, 'index']);
 
-    Route::middleware(['auth:sanctum'])->group(function () {
-    
-        // مسار بحث وفلترة السائقين المتقدم لولي الأمر
-        Route::post('drivers/search', [ParentDriverSearchController::class, 'index']);
-        
-    });
-
+    // مسار بحث وفلترة السائقين المتقدم لولي الأمر
+    Route::post('drivers/search', [ParentDriverSearchController::class, 'index']);
  
 });

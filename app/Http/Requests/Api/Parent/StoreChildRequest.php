@@ -46,6 +46,7 @@ class StoreChildRequest extends FormRequest
             
             // الصورة اختيارية، ولكن إذا رُفعت يجب أن تكون ملف صورة حقيقي وبحجم معقول
             'photo'           => 'nullable|image|mimes:jpeg,png,jpg|max:2048', 
+            'medical_notes'       => 'nullable|string|max:1000',
             
             // الملاحظات الطبية اختيارية
             'medical_notes'   => 'nullable|string|max:1000',
@@ -69,6 +70,13 @@ class StoreChildRequest extends FormRequest
             'parent_id.exists'   => 'ولي الأمر المحدد غير موجود في النظام.',
             'school_id.exists'   => 'المدرسة المحددة غير موجودة في طرابلس.',
             'home_address_id.exists' => 'العنوان المحدد غير موجود.',
+            // رسائل خطأ الملاحظات الطبية
+            'medical_notes.string'   => 'يجب أن تكون الملاحظات الطبية عبارة عن نص مبرمج بشكل صحيح.',
+            'medical_notes.max'      => 'لا يمكن أن تتجاوز الملاحظات الطبية 1000 حرف.',
+            
+            // رسائل خطأ الفترة الزمنية المفضلة
+            'preferred_time_slot.required' => 'يجب تحديد الفترة الزمنية المفضلة للطفل (صباحية، مسائية، أو كلاهما).',
+            'preferred_time_slot.in'       => 'القيمة المحددة للفترة الزمنية غير صالحة، يجب الاختيار من القيم المعتمدة فقط.',
         ];
     }
 }

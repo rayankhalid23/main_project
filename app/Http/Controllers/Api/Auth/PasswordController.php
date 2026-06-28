@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class PasswordController extends Controller
 {
@@ -22,21 +23,40 @@ class PasswordController extends Controller
     }
 
     /**
-     1. دالة إرسال كود التحقق
+     * 1. دالة إرسال كود التحقق (Send OTP)
      */
     public function sendResetOtp(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
-        
+        // استخدام Validator يدوي لضمان تسجيل أخطاء الـ Validation في الـ Log قبل الرد على العميل
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email'
+        ]);
+
+        if ($validator->fails()) {
+            Log::warning("⚠️ [Send OTP Validation Failed] Inputs: " . json_encode($request->all()) . " | Errors: " . json_encode($validator->errors()->all()));
+            return response()->json([
+                'status'  => false, 
+                'message' => 'البريد الإلكتروني المدخل غير صالح.',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        Log::info("📨 [Send OTP Attempt] Email: {$request->email}");
+
         try {
             $user = User::where('email', $request->email)->first();
 
             if (!$user) {
-                return response()->json(['status' => false, 'message' => 'البريد الإلكتروني المدخل غير مسجل.'], 404);
+                Log::warning("⚠️ [Send OTP Failed] Email not registered: {$request->email}");
+                return response()->json([
+                    'status'  => false, 
+                    'message' => 'البريد الإلكتروني المدخل غير مسجل لدينا.'
+                ], 404);
             }
 
             // توليد الكود وحفظه
             $code = $this->otpService->generate($user->email, 'RESET_PASSWORD');
+            Log::info("🔑 [OTP Generated] Email: {$user->email} | Code generated successfully.");
 
             // إرسال الكود عبر البريد
             $this->emailService->sendOtp(
@@ -48,73 +68,122 @@ class PasswordController extends Controller
                 'RESET_PASSWORD'
             );
 
+            Log::info("✅ [OTP Sent Successfully] Email: {$user->email} via EmailService.");
+
             return response()->json([
-                'status' => true, 
-                'message' => 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.'
-            ]);
+                'status'  => true, 
+                'message' => 'تم إرسال رمز التحقق إلى بريدك الإلكتروني بنجاح. يرجى التحقق من صندوق الوارد.'
+            ], 200);
+
         } catch (\Exception $e) {
-            Log::error("Send OTP Error: " . $e->getMessage());
-            return response()->json(['status' => false, 'message' => 'فشل إرسال الكود.'], 500);
+            Log::error("🔥 [Fatal Error In Send OTP] Message: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
+            return response()->json([
+                'status'  => false, 
+                'message' => 'حدث عطل تقني غير متوقع أثناء إرسال كود التحقق. يرجى المحاولة لاحقاً.'
+            ], 500);
         }
     }
 
     /**
-     2. الدالة الجديدة: التحقق من صحة كود الـ OTP فقط دون تغيير كلمة المرور
+     * 2. دالة التحقق من صحة كود الـ OTP (Verify OTP)
      */
     public function verifyOtp(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'code'  => 'required|digits:6',
         ]);
 
+        if ($validator->fails()) {
+            Log::warning("⚠️ [Verify OTP Validation Failed] Inputs: " . json_encode($request->except('code')) . " | Errors: " . json_encode($validator->errors()->all()));
+            return response()->json([
+                'status'  => false, 
+                'message' => 'البيانات المدخلة غير صحيحة.',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        Log::info("📨 [Verify OTP Attempt] Email: {$request->email} | Code Entered: {$request->code}");
+
         try {
-            // التحقق من الكود عبر الـ OtpService (الـ Service ستقوم بوضع mark كـ مستخدم في حال النجاح)
             $verify = $this->otpService->verify($request->email, $request->code, 'RESET_PASSWORD');
             
             if (!$verify['success']) {
-                return response()->json(['status' => false, 'message' => $verify['message']], 400);
+                $reasonCode = $verify['reason'] ?? 'WRONG_CODE_OR_EXPIRED';
+                
+                Log::warning("❌ [Verification Failed] Email: {$request->email} | Reason Code: {$reasonCode} | Message: {$verify['message']}");
+                
+                return response()->json([
+                    'status'     => false,
+                    'error_code' => $reasonCode,
+                    'message'    => $verify['message'] ?? 'رمز التحقق غير صحيح أو انتهت صلاحيته.'
+                ], 400);
             }
 
-            // إذا الكود صحيح، نرجع نجاح للفرونت لتوجيهه لشاشة تعيين كلمة المرور الجديدة
+            Log::info("✅ [Verification Success] Email: {$request->email} has passed OTP check successfully.");
+
             return response()->json([
-                'status' => true, 
-                'message' => 'تم التحقق من رمز الـ OTP بنجاح.'
-            ]);
+                'status'  => true, 
+                'message' => 'تم التحقق من رمز التأكيد بنجاح، يمكنك الآن تعيين كلمة مرور جديدة.'
+            ], 200);
 
         } catch (\Exception $e) {
-            Log::error("Verify OTP Error: " . $e->getMessage());
-            return response()->json(['status' => false, 'message' => 'حدث عطل تقني أثناء التحقق.'], 500);
+            Log::error("🔥 [Fatal Error In Verify OTP] Message: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
+            return response()->json([
+                'status'  => false, 
+                'message' => 'حدث عطل تقني أثناء عملية التحقق من الرمز.'
+            ], 500);
         }
     }
 
     /**
-     3. دالة تغيير كلمة المرور منفصلة بالكامل
+     * 3. دالة تغيير كلمة المرور (تم تعديل اسم الحقل ليتوافق مع الـ Login)
      */
     public function resetPassword(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'email'    => 'required|email',
-            'password' => 'required|min:6|confirmed' // يتطلب حقل password_confirmation في الـ Request
+            'password' => 'required|min:6|confirmed'
         ]);
+
+        if ($validator->fails()) {
+            Log::warning("⚠️ [Reset Password Validation Failed] Email: {$request->email} | Errors: " . json_encode($validator->errors()->all()));
+            return response()->json([
+                'status'  => false, 
+                'message' => 'كلمة المرور الجديدة غير مطابقة للشروط المعتمدة.',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        Log::info("🔄 [Reset Password Attempt] Email: {$request->email}");
 
         try {
             $user = User::where('email', $request->email)->first();
+            
             if (!$user) {
-                return response()->json(['status' => false, 'message' => 'المستخدم غير موجود.'], 404);
+                Log::warning("⚠️ [Reset Password Failed] User not found for email: {$request->email}");
+                return response()->json([
+                    'status'  => false, 
+                    'message' => 'فشلت العملية، الحساب المرتبط بهذا البريد غير موجود.'
+                ], 404);
             }
 
-            // تحديث كلمة المرور (تم استخدام password وهو الحقل الافتراضي لـ Laravel لضمان عمل الـ Login)
-            $user->update(['password' => Hash::make($request->password)]);
+            // 🔥 التعديل الجوهري هنا: تم تغيير الحقل إلى password_hash ليطابق الـ LoginController
+            $user->update(['password_hash' => Hash::make($request->password)]);
+
+            Log::info("🔒 [Reset Password Success] Password updated successfully for User ID: {$user->id} | Email: {$user->email}");
 
             return response()->json([
-                'status' => true, 
-                'message' => 'تم تحديث كلمة المرور بنجاح، يمكنك تسجيل الدخول الآن.'
-            ]);
+                'status'  => true, 
+                'message' => 'تم تحديث كلمة المرور بنجاح، يمكنك الآن الانتقال لتسجيل الدخول بالحساب.'
+            ], 200);
 
         } catch (\Exception $e) {
-            Log::error("Reset Password Error: " . $e->getMessage());
-            return response()->json(['status' => false, 'message' => 'حدث عطل تقني أثناء تحديث كلمة المرور.'], 500);
+            Log::error("🔥 [Fatal Error In Reset Password] Message: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
+            return response()->json([
+                'status'  => false, 
+                'message' => 'حدث عطل تقني أثناء تحديث كلمة المرور، يرجى إعادة المحاولة لاحقاً.'
+            ], 500);
         }
     }
 }

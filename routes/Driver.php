@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Driver\DriverRegisterController;
 use App\Http\Controllers\Api\Driver\ProfileController;
 use App\Http\Controllers\Api\Driver\DriverPreferenceController;
-
+use App\Http\Controllers\Api\Driver\AddressController;
 /*
 |--------------------------------------------------------------------------
 | Driver Routes (تم إزالة الـ prefix التكراري ليطابق v1/driver مباشرة)
@@ -38,6 +38,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // 3. المرحلة الثانية من التسجيل: رفع الوثائق وبيانات المركبة لإكمال الملف الشخصي
     Route::post('complete-profile/{userId}', [DriverRegisterController::class, 'completeProfile'])
         ->name('api.driver.complete-profile');
+
+    // موديول العناوين (Addresses Module)
+    Route::prefix('addresses')->group(function () {
+        
+        Route::get('/', [AddressController::class, 'index']);          // عرض كل العناوين
+        Route::post('/', [AddressController::class, 'store']);         // إضافة عنوان جديد
+        Route::put('/{address}', [AddressController::class, 'update']); // تعديل عنوان (ملاحظة: استخدمنا PUT ومطابق للاسم هندسياً)
+        Route::delete('/{address}', [AddressController::class, 'destroy']); // حذف العنوان ناعماً
+
+    });   
 
     // عرض بيانات الملف الشخصي للسائق وعلاقاته
     Route::get('profile', [ProfileController::class, 'show'])

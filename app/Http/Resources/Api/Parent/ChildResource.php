@@ -37,6 +37,7 @@ class ChildResource extends JsonResource
             
             'medical_notes'    => $this->medical_notes ?? 'لا توجد ملاحظات طبية',
             'qr_code_token'          => $this->qr_code_token,
+            'preferred_time_slot' => $this->preferred_time_slot ?? 'BOTH',
             
         
 

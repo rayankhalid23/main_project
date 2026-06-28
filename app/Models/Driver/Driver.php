@@ -95,4 +95,11 @@ public function students(): \Illuminate\Database\Eloquent\Relations\HasMany
     // تأكد من أن اسم الموديل 'Student' واسم الحقل 'driver_id' يطابق ما لديك في قاعدة البيانات
     return $this->hasMany(\App\Models\Student::class, 'driver_id');
 }
+/**
+ * جلب عناوين السائق من الجدول المنفصل الجديد
+ */
+public function addresses()
+{
+    return $this->hasMany(\App\Models\Driver\Address::class, 'driver_id');
+}
 }

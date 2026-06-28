@@ -1,5 +1,7 @@
 <?php
 
+set_time_limit(420); // رفع مهلة التنفيذ إلى دقيقتين (120 ثانية) بدلاً من 30 ثانية
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
