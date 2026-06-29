@@ -68,6 +68,7 @@ Route::prefix('zones')->group(function () {
     Route::put('/{id}', [ZoneController::class, 'update']);  // تعديل اسم منطقة
     Route::delete('/{id}', [ZoneController::class, 'destroy']); // حذف منطقة
 });
+Route::get('/zones-tree', [ZoneController::class, 'index']);
 });
 
 // =========================================================================

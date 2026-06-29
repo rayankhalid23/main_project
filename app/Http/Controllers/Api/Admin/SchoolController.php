@@ -20,9 +20,11 @@ class SchoolController extends Controller
         $this->schoolService = $schoolService;
     }
 
+    /**
+     * عرض كافة المدارس المسجلة بالنظام
+     */
     public function index(): JsonResponse
     {
-        // الأدمن يرى كل المدارس ليراجع المعلق منها ويوافق عليه
         $schools = $this->schoolService->getSchools();
 
         return response()->json([
@@ -32,38 +34,53 @@ class SchoolController extends Controller
         ], Response::HTTP_OK);
     }
 
+    /**
+     * إضافة مدرسة جديدة مع ربطها بالمنطقة الجغرافية (Zone)
+     */
     public function store(StoreSchoolRequest $request): JsonResponse
     {
-        // الأدمن يضيف مدرسة معتمدة فوراً
+        // الأدمن يضيف مدرسة معتمدة فوراً مع كامل بياناتها الجغرافية الجاهزة
         $data = array_merge($request->validated(), ['status' => 'approved']);
         $school = $this->schoolService->createSchool($data);
 
         return response()->json([
             'success' => true,
-            'message' => 'تم إضافة المدرسة كعنوان معتمد بنجاح.',
+            'message' => 'تم إضافة المدرسة كعنوان معتمد ومربوط جغرافياً بنجاح.',
             'data'    => new SchoolResource($school)
         ], Response::HTTP_CREATED);
     }
 
+    /**
+     * عرض تفاصيل مدرسة محددة
+     */
     public function show(School $school): JsonResponse
     {
+        // شحن علاقة الـ zone لضمان خروج البيانات كاملة للـ Front-end
+        $school->load('zone.subMunicipality.municipality');
+
         return response()->json([
             'success' => true,
             'data'    => new SchoolResource($school)
         ], Response::HTTP_OK);
     }
 
+    /**
+     * تحديث بيانات المدرسة والمنطقة التابعة لها
+     */
     public function update(UpdateSchoolRequest $request, School $school): JsonResponse
     {
         $updatedSchool = $this->schoolService->updateSchool($school, $request->validated());
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تحديث بيانات وموقع المدرسة بنجاح.',
+            'message' => 'تم تحديث بيانات وموقع المدرسة الجغرافي بنجاح.',
             'data'    => new SchoolResource($updatedSchool)
         ], Response::HTTP_OK);
     }
 
+    /**
+     * حذف مدرسة من النظام بشرط عدم وجود أطفال مسجلين بها
+     */
     public function destroy(School $school): JsonResponse
     {
         if ($school->children()->exists()) {

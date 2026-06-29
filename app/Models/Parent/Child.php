@@ -26,6 +26,9 @@ class Child extends Model
         'grade', // تأكد من وجوده هنا
         'notification_radius',
         'daily_status',
+        'gender',
+'pickup_time',
+'dropoff_time',
         'photo_url', // تم التعديل ليتطابق مع الـ DB
         'medical_notes',
         'preferred_time_slot',

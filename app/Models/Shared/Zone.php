@@ -1,21 +1,32 @@
 <?php
 
-namespace App\Models\Shared; // اضبط الـ namespace حسب مسار الملف لديك
+namespace App\Models\Shared;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\Driver; // تأكد من مسار موديل السائق لديك
+use App\Models\Driver\Driver; // تأكد من المسار الصحيح للموديل لديك
+use App\Models\Shared\SubMunicipality; // تأكد من مسار الـ SubMunicipality
 
 class Zone extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'sub_municipality_id'];
 
     /**
-     * علاقة المنطقة بالسائقين (المنطقة الواحدة يغطيها أكثر من سائق)
+     * المنطقة الدقيقة تتبع بلدية فرعية واحدة
+     */
+    public function subMunicipality(): BelongsTo
+    {
+        return $this->belongsTo(SubMunicipality::class, 'sub_municipality_id');
+    }
+
+    /**
+     * المنطقة الدقيقة يمكن أن يختارها العديد من السائقين
+     * ملاحظة: تم التأكد من اسم الجدول الوسيط (driver_zones) كما اتفقنا سابقاً
      */
     public function drivers(): BelongsToMany
     {
-        return $this->belongsToMany(Driver::class, 'driver_zone', 'zone_id', 'driver_id')
+        return $this->belongsToMany(Driver::class, 'driver_zones', 'zone_id', 'driver_id')
                     ->withTimestamps();
     }
 }

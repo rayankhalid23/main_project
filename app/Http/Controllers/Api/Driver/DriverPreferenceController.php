@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Driver\UpdateDriverPreferencesRequest;
 use App\Services\Driver\DriverPreferenceService;
 use App\Http\Resources\Api\Driver\DriverPreferenceResource;
-use App\Models\Shared\Zone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
@@ -30,6 +29,8 @@ class DriverPreferenceController extends Controller
             return response()->json(['status' => false, 'message' => 'ملف التعريف غير موجود.'], 404);
         }
 
+        // شحن العلاقات مسبقاً لمنع مشكلة الـ N+1 Query وتسريع الأداء
+        $driver->load('zones.subMunicipality.municipality');
         $preferences = $this->preferenceService->getPreferences($driver);
 
         return response()->json([
@@ -39,7 +40,8 @@ class DriverPreferenceController extends Controller
     }
 
     /**
-     * 🔄 2. دالة التحديث الشامل (الفترة + المناطق معاً)
+     * 🔄 2. دالة التحديث الشامل (الفترة + نوع الاشتراك + مصفوفة المناطق معاً)
+     * تلتقط خطأ اختلاف البلدية الفرعية وتمنع التخزين العشوائي
      */
     public function update(UpdateDriverPreferencesRequest $request): JsonResponse
     {
@@ -53,17 +55,24 @@ class DriverPreferenceController extends Controller
 
             return response()->json([
                 'status'  => true,
-                'message' => 'تم تحديث منطقة العمل والفترات الزمنية بنجاح وتطبيقها في النظام.',
+                'message' => 'تم تحديث تفضيلات العمل، نوع الاشتراك، ومناطق التغطية بنجاح بنظامك.',
                 'data'    => new DriverPreferenceResource($updatedDriver)
             ], Response::HTTP_OK);
 
         } catch (\Exception $e) {
+            // 💡 هذا السطر يقوم بتسجيل الخطأ مع تفاصيل المسار والملف والسطر (مهم جداً للمطورين)
+            \Log::error('Driver Preference Error: ' . $e->getMessage(), [
+                'driver_id' => $request->user()->driver->id,
+                'trace'     => $e->getTraceAsString()
+            ]);
+        
             return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
     }
 
     /**
-     * ➕ 3. دالة إضافة منطقة منفردة لتفضيلات السائق
+     * ➕ 3. دالة إضافة منطقة منفردة لتفضيلات السائق الحالية
+     * تتحقق من أن المنطقة الجديدة تتبع نفس البلدية الصغيرة للمناطق السابقة
      */
     public function addZone(Request $request): JsonResponse
     {
@@ -71,14 +80,29 @@ class DriverPreferenceController extends Controller
             'zone_id' => ['required', 'integer', 'exists:zones,id']
         ], ['zone_id.exists' => 'المنطقة المحددة غير مسجلة بالنظام.']);
 
-        $driver = $request->user()->driver;
-        $updatedDriver = $this->preferenceService->addZoneToDriver($driver, $request->zone_id);
+        try {
+            $driver = $request->user()->driver;
+            if (!$driver) {
+                return response()->json(['status' => false, 'message' => 'ملف التعريف غير موجود.'], 404);
+            }
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'تم إضافة المنطقة الجديدة لتفضيلاتك بنجاح.',
-            'data'    => new DriverPreferenceResource($updatedDriver)
-        ], Response::HTTP_OK);
+            $updatedDriver = $this->preferenceService->addZoneToDriver($driver, $request->zone_id);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم إضافة المنطقة الجديدة لتفضيلات التغطية الخاصة بك بنجاح.',
+                'data'    => new DriverPreferenceResource($updatedDriver)
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            // 💡 هذا السطر يقوم بتسجيل الخطأ مع تفاصيل المسار والملف والسطر (مهم جداً للمطورين)
+            \Log::error('Driver Preference Error: ' . $e->getMessage(), [
+                'driver_id' => $request->user()->driver->id,
+                'trace'     => $e->getTraceAsString()
+            ]);
+        
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 
     /**
@@ -90,18 +114,33 @@ class DriverPreferenceController extends Controller
             'zone_id' => ['required', 'integer']
         ]);
 
-        $driver = $request->user()->driver;
-        $updatedDriver = $this->preferenceService->removeZoneFromDriver($driver, $request->zone_id);
+        try {
+            $driver = $request->user()->driver;
+            if (!$driver) {
+                return response()->json(['status' => false, 'message' => 'ملف التعريف غير موجود.'], 404);
+            }
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'تم إزالة المنطقة من تفضيلاتك بنجاح.',
-            'data'    => new DriverPreferenceResource($updatedDriver)
-        ], Response::HTTP_OK);
+            $updatedDriver = $this->preferenceService->removeZoneFromDriver($driver, $request->zone_id);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم إزالة المنطقة من تفضيلات التغطية الخاصة بك بنجاح.',
+                'data'    => new DriverPreferenceResource($updatedDriver)
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            // 💡 هذا السطر يقوم بتسجيل الخطأ مع تفاصيل المسار والملف والسطر (مهم جداً للمطورين)
+            \Log::error('Driver Preference Error: ' . $e->getMessage(), [
+                'driver_id' => $request->user()->driver->id,
+                'trace'     => $e->getTraceAsString()
+            ]);
+        
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 
     /**
-     * ⚙️ 5. دالة الخيارات الافتراضية للنظام (مهمة جداً للـ Front-end لبناء واجهة الاختيارات)
+     * ⚙️ 5. دالة الخيارات الافتراضية للنظام (البلديات والمحلات والزونات لبناء القوائم المنسدلة في الفرونت)
      */
     public function defaults(): JsonResponse
     {

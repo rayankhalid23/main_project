@@ -12,25 +12,26 @@ class StoreSchoolRequest extends FormRequest
     }
 
     public function rules(): array
-    {
-        return [
-            'name'         => 'required|string|max:150|unique:schools,name',
-            'lat'          => 'required|numeric|between:-90,90',
-            'lng'          => 'required|numeric|between:-180,180',
-            'address_text' => 'required|string|max:255'
-        ];
-    }
+{
+    return [
+        'name'     => 'required|string|max:150|unique:schools,name',
+        'lat'      => 'required|numeric|between:-90,90',
+        'lng'      => 'required|numeric|between:-180,180',
+        'address'  => 'required|string|max:255',
+        'zone_id'  => 'required|exists:zones,id' // التحقق من وجود المنطقة
+    ];
+}
 
-    public function messages(): array
-    {
-        return [
-            'name.required'         => 'اسم المدرسة حقل مطلوب.',
-            'name.unique'           => 'اسم المدرسة هذا مقترح أو مسجل في النظام مسبقاً.',
-            'lat.required'          => 'إحداثيات خط العرض مطلوبة.',
-            'lat.between'           => 'إحداثيات خط العرض غير صالحة جغرافياً.',
-            'lng.required'          => 'إحداثيات خط الطول مطلوبة.',
-            'lng.between'           => 'إحداثيات خط الطول غير صالحة جغرافياً.',
-            'address_text.required' => 'الوصف النصي لعنوان المدرسة مطلوب.',
-        ];
-    }
+public function messages(): array
+{
+    return [
+        'name.required'     => 'اسم المدرسة حقل مطلوب.',
+        'name.unique'       => 'اسم المدرسة مسجل مسبقاً في النظام.',
+        'lat.required'      => 'إحداثيات خط العرض مطلوبة.',
+        'lng.required'      => 'إحداثيات خط الطول مطلوبة.',
+        'address.required'  => 'عنوان المدرسة التفصيلي مطلوب.',
+        'zone_id.required'  => 'يجب اختيار المنطقة الجغرافية (البلدية) للمدرسة.',
+        'zone_id.exists'    => 'المنطقة المختارة غير صالحة أو غير موجودة.'
+    ];
+}
 }

@@ -14,21 +14,27 @@ class UpdateSchoolRequest extends FormRequest
     public function rules(): array
     {
         $schoolId = $this->route('school') ? $this->route('school')->id : null;
-
+    
         return [
-            'name'         => 'sometimes|required|string|max:150|unique:schools,name,' . $schoolId,
-            'lat'          => 'sometimes|required|numeric|between:-90,90',
-            'lng'          => 'sometimes|required|numeric|between:-180,180',
-            'address_text' => 'sometimes|required|string|max:255',
-            'status'       => 'sometimes|required|in:approved,pending'
+            'name'     => 'sometimes|required|string|max:150|unique:schools,name,' . $schoolId,
+            'lat'      => 'sometimes|required|numeric|between:-90,90',
+            'lng'      => 'sometimes|required|numeric|between:-180,180',
+            'address'  => 'sometimes|required|string|max:255',
+            'zone_id'  => 'sometimes|required|exists:zones,id',
+            'status'   => 'sometimes|required|in:approved,pending'
         ];
     }
 
     public function messages(): array
     {
         return [
-            'name.unique' => 'اسم المدرسة مستخدم بالفعل.',
-            'status.in'   => 'الحالة الممررة غير صالحة، يجب أن تكون approved أو pending.',
+            'name.required'     => 'اسم المدرسة حقل مطلوب.',
+            'name.unique'       => 'اسم المدرسة مسجل مسبقاً في النظام.',
+            'lat.required'      => 'إحداثيات خط العرض مطلوبة.',
+            'lng.required'      => 'إحداثيات خط الطول مطلوبة.',
+            'address.required'  => 'عنوان المدرسة التفصيلي مطلوب.',
+            'zone_id.required'  => 'يجب اختيار المنطقة الجغرافية (البلدية) للمدرسة.',
+            'zone_id.exists'    => 'المنطقة المختارة غير صالحة أو غير موجودة.'
         ];
     }
 }

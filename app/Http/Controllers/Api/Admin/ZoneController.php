@@ -8,6 +8,7 @@ use App\Services\Shared\ZoneService;
 use App\Http\Requests\Api\Admin\StoreZoneRequest; // 👈 تم الدمج
 use App\Http\Resources\Api\Shared\ZoneResource;       // 👈 تم الدمج
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class ZoneController extends Controller
@@ -19,17 +20,17 @@ class ZoneController extends Controller
         $this->zoneService = $zoneService;
     }
 
-    /**
-     * 1. عرض كافة المناطق (متاح للسائقين، أولياء الأمور، والآدمن)
-     */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $zones = $this->zoneService->getAllZones();
-        
-        return response()->json([
-            'status' => true,
-            'data'   => ZoneResource::collection($zones) // تحويل القائمة كاملة عبر الـ Resource لتوحيد البيانات
-        ], Response::HTTP_OK);
+        // إذا كان المسار هو zones-tree، نرجع الشجرة كاملة
+        if ($request->is('*/zones-tree')) {
+            $data = \App\Models\Shared\Municipality::with('subMunicipalities.zones')->get();
+        } else {
+            // إذا كان المسار عادي (/) نرجع المناطق فقط
+            $data = \App\Models\Shared\Zone::all();
+        }
+    
+        return response()->json(['status' => true, 'data' => $data], 200);
     }
 
     /**
@@ -101,4 +102,6 @@ class ZoneController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
+
+
 }

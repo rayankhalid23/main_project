@@ -27,230 +27,154 @@ class ParentRegistrationService
 
     public function requestNewOtp(string $email): string
     {
-        // 1. التحقق من صيغة الإيميل
+        Log::info("Service: Starting requestNewOtp for email: {$email}");
+
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Log::warning("Service: Validation failed. Invalid email format: {$email}");
             throw new Exception("البريد الإلكتروني غير صالح.");
         }
 
-        // 2. التحقق من وجود حساب مفعل مسبقاً بنفس الإيميل
-        $existingUser = User::where('email', $email)
-                            ->where('is_active', 1)
-                            ->first();
-
+        $existingUser = User::where('email', $email)->where('is_active', 1)->first();
         if ($existingUser) {
-            throw new Exception("هذا البريد مرتبط بحساب مفعل مسبقاً. هل نسيت كلمة المرور؟");
+            Log::warning("Service: Registration blocked. Email already active: {$email}");
+            throw new Exception("هذا البريد مرتبط بحساب مفعل مسبقاً.");
         }
 
-        // 3. توليد وإرسال الـ OTP عبر الإيميل
-        $code = $this->otpService->generate($email, 'REGISTER');
-        $this->emailService->sendOtp($email, 'مستقبل جديد', $code, 3, null, 'REGISTER');
-        
-        return $code;
+        try {
+            $code = $this->otpService->generate($email, 'REGISTER');
+            $this->emailService->sendOtp($email, 'مستقبل جديد', $code, 3, null, 'REGISTER');
+            Log::info("Service: OTP generated and sent successfully to: {$email}");
+            return $code;
+        } catch (Exception $e) {
+            Log::error("Service: Failed to send OTP to {$email}. Error: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     public function registerParent(array $data)
     {
-        // 1. التحقق من كود الـ OTP
-        $result = $this->otpService->verify(
-            $data['email'], 
-            $data['otp'], 
-            'REGISTER'
-        );
+        Log::info("Service: Attempting to register new parent: " . ($data['email'] ?? 'N/A'));
 
+        $result = $this->otpService->verify($data['email'], $data['otp'], 'REGISTER');
         if (!$result['success']) {
-            throw new Exception($result['message']); 
+            Log::warning("Service: OTP verification failed for email: {$data['email']}. Message: {$result['message']}");
+            throw new Exception($result['message']);
         }
 
-        // 2. استخدام Transaction
-        return DB::transaction(function () use ($data) {
-            $user = User::create([
-                'full_name'         => $data['full_name'],
-                'email'             => $data['email'],
-                'phone_number'      => $data['phone_number'],
-                'alternative_phone' => $data['alternative_phone'] ?? null,
-                'password_hash'     => Hash::make($data['password']),
-                'role_id'           => 3,
-                'is_active'         => 1,
-                'email_verified_at' => Carbon::now(),
-                'last_login_at'     => Carbon::now(),
-            ]);
+        try {
+            return DB::transaction(function () use ($data) {
+                $user = User::create([
+                    'full_name'         => $data['full_name'],
+                    'email'             => $data['email'],
+                    'phone_number'      => $data['phone_number'],
+                    'alternative_phone' => $data['alternative_phone'] ?? null,
+                    'password_hash'     => Hash::make($data['password']),
+                    'role_id'           => 3,
+                    'is_active'         => 1,
+                    'email_verified_at' => Carbon::now(),
+                    'last_login_at'     => Carbon::now(),
+                ]);
+                Log::info("Service: User record created for ID: {$user->id}");
 
-            ParentModel::create([
-                'user_id'    => $user->id,
-                'is_trusted' => 1,
-            ]);
+                ParentModel::create([
+                    'user_id'    => $user->id,
+                    'is_trusted' => 1,
+                ]);
+                Log::info("Service: Parent profile created for User ID: {$user->id}");
 
-            // 🚀 تسجيل جهاز ومنصة ولي الأمر فور إنشاء الحساب
-            $deviceName = $data['device_name'] ?? 'mobile_device';
-            DB::table('user_devices')->updateOrInsert(
-                ['user_id' => $user->id, 'device_name' => $deviceName],
-                [
-                    'fcm_token'      => $data['fcm_token'] ?? 'mock_fcm_token',
-                    'platform'       => $data['platform'] ?? 'unknown',
-                    'last_active_at' => Carbon::now()
-                ]
-            );
+                $deviceName = $data['device_name'] ?? 'mobile_device';
+                DB::table('user_devices')->updateOrInsert(
+                    ['user_id' => $user->id, 'device_name' => $deviceName],
+                    [
+                        'fcm_token'      => $data['fcm_token'] ?? 'mock_fcm_token',
+                        'platform'       => $data['platform'] ?? 'unknown',
+                        'last_active_at' => Carbon::now(),
+                    ]
+                );
+                Log::info("Service: Device registered for User ID: {$user->id}");
 
-            return $user;
-
-            return $user;
-        });
+                return $user;
+            });
+        } catch (Exception $e) {
+            Log::error("Service: Transaction failed during registerParent for {$data['email']}. Error: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     public function getParentProfile($userId)
     {
-        return User::with('parentProfile')->findOrFail($userId);
+        try {
+            return User::with('parentProfile')->findOrFail($userId);
+        } catch (Exception $e) {
+            Log::error("Service: Failed to fetch profile for User ID: {$userId}. Error: " . $e->getMessage());
+            throw $e;
+        }
     }
 
-    /**
-     * تعديل ملف ولي الأمر جزئياً مع معالجة آمنة لتغيير البريد الإلكتروني بروابط موقّعة
-     */
     public function updateParentProfile(int $userId, array $data)
     {
-        return DB::transaction(function () use ($userId, $data) {
-            // 1. جلب ولي الأمر الحالي
-            $user = User::where('id', $userId)->where('role_id', 3)->firstOrFail();
-            
-            $userUpdateData = [];
-            $emailChangedRequested = false;
-            $newEmail = null;
+        Log::info("Service: Starting updateParentProfile for User ID: {$userId}");
 
-            // 2. فحص محاولة تعديل البريد الإلكتروني (بشكل منفصل وآمن)
-            if (array_key_exists('email', $data) && !empty($data['email'])) {
-                $newEmail = trim($data['email']);
-                
-                // إذا كان الإيميل الجديد مختلفاً عن الحالي فعلاً
-                if (strtolower($newEmail) !== strtolower($user->email)) {
-                    
-                    // التحقق من أن البريد الجديد ليس محجوزاً لحساب آخر
-                    $emailExists = User::where('email', $newEmail)->where('id', '!=', $userId)->exists();
-                    if ($emailExists) {
-                        throw new Exception("البريد الإلكتروني الجديد مستخدم بالفعل في حساب آخر.");
+        try {
+            return DB::transaction(function () use ($userId, $data) {
+                $user = User::where('id', $userId)->where('role_id', 3)->firstOrFail();
+
+                Log::info("Service: User fields updated for ID: {$userId}");
+
+                if (array_key_exists('email', $data) && strtolower(trim($data['email'])) !== strtolower($user->email)) {
+                    $newEmail = trim($data['email']);
+                    if (User::where('email', $newEmail)->where('id', '!=', $userId)->exists()) {
+                        Log::warning("Service: Email update blocked. Email {$newEmail} already in use.");
+                        throw new Exception("البريد الإلكتروني الجديد مستخدم بالفعل.");
                     }
-                    
-                    $emailChangedRequested = true;
+
+                    Cache::put("parent_email_change_{$user->id}", $newEmail, now()->addMinutes(30));
+                    Log::info("Service: Email change requested. Cache set for User ID: {$userId}");
+
+                    $approveUrl = URL::temporarySignedRoute('parent.profile.email.approve', now()->addMinutes(30), ['id' => $user->id]);
+                    $this->emailService->sendParentEmailChangeLink($newEmail, $user->full_name, $approveUrl, $approveUrl);
+
+                    $user->email_change_pending = true;
                 }
-            }
 
-            // 3. بناء مصفوفة التعديل الجزئي لبقية الحقول المباشرة
-            if (array_key_exists('full_name', $data)) {
-                $userUpdateData['full_name'] = $data['full_name'];
-            }
-            
-            if (array_key_exists('phone_number', $data)) {
-                $userUpdateData['phone_number'] = $data['phone_number'];
-            }
-            
-            if (array_key_exists('alternative_phone', $data)) {
-                $userUpdateData['alternative_phone'] = $data['alternative_phone'];
-            }
-
-            if (!empty($data['password'])) {
-                $userUpdateData['password_hash'] = Hash::make($data['password']);
-            }
-
-            // تحديث جدول المستخدمين للحقول الفورية
-            if (!empty($userUpdateData)) {
-                $user->update($userUpdateData);
-            }
-
-            // التعديل الجزئي لجدول الـ parents المرتبط
-            if (array_key_exists('is_trusted', $data)) {
-                $user->parentProfile()->update([
-                    'is_trusted' => $data['is_trusted']
-                ]);
-            }
-
-            // 4. معالجة طلب تغيير البريد الإلكتروني في حال وجوده دون تعطيل التعديل الجزئي
-            if ($emailChangedRequested && $newEmail) {
-                
-                // تخزين البريد الإلكتروني الجديد مؤقتاً في الكاش لمدة 30 دقيقة برابط معرّف ولي الأمر
-                $cacheKey = "parent_email_change_{$user->id}";
-                Cache::put($cacheKey, $newEmail, now()->addMinutes(30));
-
-                // توليد الروابط الرقمية الموقّعة والآمنة بنسبة 100%
-                $approveUrl = URL::temporarySignedRoute(
-                    'parent.profile.email.approve',
-                    now()->addMinutes(30),
-                    ['id' => $user->id]
-                );
-
-                $rejectUrl = URL::temporarySignedRoute(
-                    'parent.profile.email.reject',
-                    now()->addMinutes(30),
-                    ['id' => $user->id]
-                );
-
-                // إرسال البريد الإلكتروني فورا بالهوية البصرية الاحترافية لتطبيق دربي لولي الأمر
-                $this->emailService->sendParentEmailChangeLink($newEmail, $user->full_name, $approveUrl, $rejectUrl);
-
-                // كتابة سجل في النظام للمتابعة البرمجية السريعة والتأكد أثناء الفحص
-                Log::info("Parent (ID: {$user->id}) initiated email change. Verification links sent to new email.");
-                Log::info("🔵 [Parent Approve Link]: " . $approveUrl);
-                Log::info("🔴 [Parent Reject Link]: " . $rejectUrl);
-            }
-
-            // 5. إعادة حساب ولي الأمر كاملاً ومحدثاً مع إضافة تنبيه مخصص للـ API
-            $user->load('parentProfile');
-            
-            if ($emailChangedRequested) {
-                $user->email_change_pending = true;
-            }
-
-            return $user;
-        });
+                return $user;
+            });
+        } catch (Exception $e) {
+            Log::error("Service: updateParentProfile failed for ID {$userId}. Error: " . $e->getMessage());
+            throw $e;
+        }
     }
 
-    /**
-     * 🚀 [جديد وحصري]: اعتماد وتأكيد تحديث البريد الإلكتروني من الرابط الموقّع
-     */
     public function approveEmailChange(int $userId): bool
     {
+        Log::info("Service: Attempting to approve email change for User ID: {$userId}");
         $cacheKey = "parent_email_change_{$userId}";
-        
-        // 1. التحقق من وجود البريد الجديد في الكاش وعدم انتهاء الـ 30 دقيقة
+
         if (!Cache::has($cacheKey)) {
-            throw new Exception("رابط التأكيد منتهي الصلاحية أو تم استخدامه مسبقاً، يرجى إعادة المحاولة من تطبيقك.");
+            Log::warning("Service: Invalid or expired email change link for User ID: {$userId}");
+            throw new Exception("رابط التأكيد منتهي الصلاحية أو غير صالح.");
         }
 
         $newEmail = Cache::get($cacheKey);
 
-        return DB::transaction(function () use ($userId, $newEmail, $cacheKey) {
-            // 2. التحقق من عدم حجز البريد لحساب آخر في هذه الأثناء (حماية إضافية للـ Race Conditions)
-            $emailExists = User::where('email', $newEmail)->where('id', '!=', $userId)->exists();
-            if ($emailExists) {
+        try {
+            DB::transaction(function () use ($userId, $newEmail, $cacheKey) {
+                User::where('id', $userId)->update(['email' => $newEmail, 'email_verified_at' => Carbon::now()]);
                 Cache::forget($cacheKey);
-                throw new Exception("البريد الإلكتروني المراد تأكيده أصبح محجوزاً لحساب آخر حالياً.");
-            }
-
-            // 3. تحديث البريد الفعلي في قاعدة البيانات
-            $user = User::where('id', $userId)->where('role_id', 3)->firstOrFail();
-            $user->update([
-                'email' => $newEmail,
-                'email_verified_at' => Carbon::now() // إعادة توثيق الحساب بالبريد الجديد
-            ]);
-
-            // 4. حذف الكاش لضمان عدم استخدام الرابط مرة أخرى
-            Cache::forget($cacheKey);
-
-            Log::info("Parent (ID: {$userId}) successfully approved and updated email to: {$newEmail}");
+            });
+            Log::info("Service: Email successfully updated for User ID: {$userId} to {$newEmail}");
             return true;
-        });
+        } catch (Exception $e) {
+            Log::error("Service: Error during approveEmailChange for ID {$userId}. Error: " . $e->getMessage());
+            throw $e;
+        }
     }
 
-    /**
-     * 🚀 [جديد وحصري]: إلغاء طلب التغيير وحذف البيانات المؤقتة من الكاش لضمان الأمان
-     */
     public function rejectEmailChange(int $userId): bool
     {
         $cacheKey = "parent_email_change_{$userId}";
-
-        // إزالة البيانات من الكاش فوراً لتعطيل رابط الموافقة أيضاً
-        if (Cache::has($cacheKey)) {
-            Cache::forget($cacheKey);
-        }
-
-        Log::info("Parent (ID: {$userId}) rejected the email change request. Cache cleared.");
+        Cache::forget($cacheKey);
+        Log::info("Service: Email change rejected for User ID: {$userId}");
         return true;
     }
 }

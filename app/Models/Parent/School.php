@@ -4,17 +4,19 @@ namespace App\Models\Parent;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Shared\Zone;
 
 class School extends Model
 {
-    // تحديد اسم الجدول الفعلي كما في الصورة
+    // تحديد اسم الجدول الفعلي
     protected $table = 'schools'; 
 
     // إيقاف الطوابع الزمنية تماماً بناءً على طلبك
     public $timestamps = false;
 
     /**
-     * الحقول القابلة للتعبئة (Mass Assignable) مطابقة للصورة
+     * الحقول القابلة للتعبئة (Mass Assignable)
      */
     protected $fillable = [
         'name',
@@ -22,7 +24,16 @@ class School extends Model
         'lng',
         'address_text',
         'status',
+        'zone_id', // 👈 تم إضافة الحقل هنا لربط المدرسة بـ زون جغرافية دقيقة
     ];
+
+    /**
+     * 🗺️ علاقة المدرسة بالمنطقة الجغرافية الدقيقة (BelongsTo)
+     */
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class, 'zone_id');
+    }
 
     /**
      * علاقة المدرسة بالأطفال (المدرسة الواحدة بها العديد من الأطفال)

@@ -3,17 +3,18 @@
 namespace App\Models\Driver;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Student;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Shared\Zone;
+use App\Enums\driver\DriverShift;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Enums\driver\DriverShift; // 👈 استدعاء الـ Enum الخاص بالفترات
-use App\Models\Shared\Zone;       // 👈 استدعاء موديل المناطق
 
 class Driver extends Model
 {
-    // بما أننا ألغينا الـ timestamps، هذا ممتاز
+    // إلغاء الـ timestamps للمحافظة على هيكلية جدولك الحالي
     public $timestamps = false;
     protected $table = 'drivers';
 
@@ -21,18 +22,19 @@ class Driver extends Model
         'user_id', 
         'gender',
         'shift',
+        'subscription_type', // الحقل الجديد المرتبط بنظام الجغرافيا والاشتراكات الجديد
         'national_id', 
         'license_number', 
         'license_expiry', 
-        'status',          // سنعتمد عليه في منطق الموافقة (Pending, Active, Suspended)
+        'status',          // معتمد في منطق الموافقة الادارية (Pending, Active, Suspended)
         'current_lat', 
         'current_lng', 
         'last_ping_at'
     ];
 
     /**
-     * تحويل أنواع البيانات (Casts)
-     * ضروري جداً لتعامل لارافيل الصحيح مع الإحداثيات والتواريخ والـ Enums
+     * تحويل أنواع البيانات تلقائياً (Casts)
+     * ضروري لتعامل لارافيل الصحيح مع الإحداثيات والتواريخ والـ Enums
      */
     protected function casts(): array
     {
@@ -41,65 +43,77 @@ class Driver extends Model
             'current_lng'    => 'float',
             'last_ping_at'   => 'datetime',
             'license_expiry' => 'date',
-            'shift'          => DriverShift::class, // 👈 تحويل تلقائي للـ Enum لقراءة الـ value والـ label
+            'shift'          => DriverShift::class, // تحويل تلقائي لقراءة الـ value والـ label للـ Enum
         ];
     }
 
     /**
      * 🗺️ علاقة السائق بالمناطق المخصصة للعمل (Many-to-Many)
+     * تربط السائق بالمناطق الدقيقة المتعددة التي يغطيها عبر الجدول الوسيط driver_zones
      */
     public function zones(): BelongsToMany
     {
-        return $this->belongsToMany(Zone::class, 'driver_zone', 'driver_id', 'zone_id')
-                    ->withTimestamps(); // إذا كان جدول الوسيط يحتوي على timestamps
+        return $this->belongsToMany(Zone::class, 'driver_zones');
     }
 
-    // علاقة مع المستخدم (حساب السائق)
+    /**
+     * علاقة مع المستخدم (حساب السائق الأساسي)
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // علاقة مع المركبات
+    /**
+     * علاقة مع المركبات التابعة للسائق
+     */
     public function vehicles(): HasMany
     {
         return $this->hasMany(Vehicle::class, 'driver_id');
     }
 
-    // علاقة مع الوثائق
+    /**
+     * علاقة مع وثائق السائق (الرخصة، كتيب المركبة، إلخ)
+     */
     public function documents(): HasMany
     {
         return $this->hasMany(DriverDocument::class, 'driver_id');
     }
 
-    // علاقة مع الموافقات (للسجل الإداري)
+    /**
+     * علاقة مع الموافقات (للسجل الإداري والتدقيق)
+     */
     public function approvals(): HasMany
     {
         return $this->hasMany(DriverApproval::class, 'driver_id');
     }
-    // 5. 🔥 الفلترة الذكية بالسعة المتبقية للمركبة (سعة المركبة النشطة - عدد الطلاب الحاليين >= عدد الأطفال المطلوب)
+
+    /**
+     * علاقة السائق مع الطلاب المشتركين معه حالياً
+     */
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class, 'driver_id');
+    }
+
+    /**
+     * جلب عناوين السائق المتعددة من الجدول المنفصل
+     */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(Address::class, 'driver_id');
+    }
+
+    /**
+     * 🔥 الفلترة الذكية بالسعة المتبقية للمركبة
+     * تفحص (سعة المركبة النشطة - عدد الطلاب الحاليين >= عدد المقاعد المطلوبة للأطفال الجدد)
+     */
     public function scopeAvailableCapacity(Builder $query, ?int $requiredSeats): Builder
     {
         if (!$requiredSeats) return $query;
 
         return $query->whereHas('vehicles', function ($q) use ($requiredSeats) {
-            // نأخذ المركبة المفعلة أو الأولى كمثال، ونطرح منها كاونت الطلاب المشتركين
             $q->whereRaw('(capacity - (select count(*) from students where students.driver_id = drivers.id)) >= ?', [$requiredSeats]);
         });
     }
-    /**
- * علاقة السائق مع الطلاب المشتركين معه حالياً
- */
-public function students(): \Illuminate\Database\Eloquent\Relations\HasMany
-{
-    // تأكد من أن اسم الموديل 'Student' واسم الحقل 'driver_id' يطابق ما لديك في قاعدة البيانات
-    return $this->hasMany(\App\Models\Student::class, 'driver_id');
-}
-/**
- * جلب عناوين السائق من الجدول المنفصل الجديد
- */
-public function addresses()
-{
-    return $this->hasMany(\App\Models\Driver\Address::class, 'driver_id');
-}
 }
