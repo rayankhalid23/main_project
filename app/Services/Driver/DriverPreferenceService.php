@@ -11,6 +11,9 @@ use Exception;
 
 class DriverPreferenceService
 {
+    /**
+     * جلب التفضيلات مع العلاقات الهرمية (المنطقة -> البلدية الفرعية -> البلدية الكبرى)
+     */
     public function getPreferences(Driver $driver): Driver
     {
         return $driver->load('zones.subMunicipality.municipality');
@@ -28,23 +31,25 @@ class DriverPreferenceService
                 'subscription_type' => $data['subscription_type'] ?? $driver->subscription_type,
             ]);
 
-            $zoneIds = $data['zones'] ?? $data['zone_ids'] ?? [];
+            $zoneIds = $data['zones'] ?? [];
 
             if (!empty($zoneIds)) {
-                // استخراج معرفات البلديات الفرعية (sub_municipality_id) للمناطق المرسلة
+                // استخراج معرفات البلديات الفرعية للمناطق المرسلة للتحقق من تطابقها
                 $subMunicipalityIds = Zone::whereIn('id', $zoneIds)
                     ->pluck('sub_municipality_id')
+                    ->filter() // استبعاد القيم الفارغة إن وجدت
                     ->unique();
 
-                // إذا كانت النتيجة تحتوي على أكثر من ID، فهذا يعني أن السائق اختار مناطق في بلديات فرعية مختلفة
                 if ($subMunicipalityIds->count() > 1) {
-                    throw new Exception('عذراً، يجب أن تكون جميع المناطق المختارة تابعة لنفس البلدية الفرعية الموحدة.');
+                    throw new Exception('عذراً، يجب أن تكون جميع المناطق المختارة تابعة لنفس البلدية الفرعية.');
                 }
             }
             
+            // تحديث العلاقة باستخدام جدول الربط الصحيح 'driver_zone'
             $driver->zones()->sync($zoneIds);
-            return $driver->load('zones.subMunicipality.municipality');
-        ]);
+            
+            return $driver->fresh(['zones.subMunicipality.municipality']);
+        });
     }
 
     /**
@@ -56,16 +61,16 @@ class DriverPreferenceService
         $currentZones = $driver->zones;
 
         if ($currentZones->isNotEmpty()) {
-            // جلب البلدية الفرعية للمناطق التي يمتلكها السائق حالياً
             $currentSubMunicipalityId = $currentZones->first()->sub_municipality_id;
 
-            // التحقق من أن المنطقة الجديدة تملك نفس الـ sub_municipality_id
             if ($targetZone->sub_municipality_id !== $currentSubMunicipalityId) {
-                throw new Exception('لا يمكن إضافة هذه المنطقة؛ لأنها تتبع بلدية فرعية مختلفة عن منطقتك الحالية.');
+                throw new Exception('لا يمكن إضافة هذه المنطقة؛ لأنها تتبع بلدية فرعية مختلفة.');
             }
         }
 
+        // إضافة المنطقة بدون التأثير على المناطق الموجودة سابقاً
         $driver->zones()->syncWithoutDetaching([$zoneId]);
+        
         return $driver->load('zones.subMunicipality.municipality');
     }
 
@@ -75,6 +80,9 @@ class DriverPreferenceService
         return $driver->load('zones.subMunicipality.municipality');
     }
 
+    /**
+     * جلب هيكل البيانات الجغرافي لبناء القوائم المنسدلة
+     */
     public function getSystemDefaults(): array
     {
         return [

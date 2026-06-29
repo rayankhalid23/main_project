@@ -4,45 +4,33 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Shared\Zone;
+use App\Models\Shared\SubMunicipality;
 
 class ZoneSeeder extends Seeder
 {
-    /**
-     * تشغيل التغذية الآلية لمناطق طرابلس الكبرى
-     */
     public function run(): void
     {
-        $zones = [
-            ['name' => 'حي الأندلس'],
-            ['name' => 'سوق الجمعة'],
-            ['name' => 'عين زارة'],
-            ['name' => 'تاجوراء'],
-            ['name' => 'بوسليم'],
-            ['name' => 'قرجي'],
-            ['name' => 'السياحية'],
-            ['name' => 'النوفليين'],
-            ['name' => 'الهضبة الخضراء'],
-            ['name' => 'السبعة'],
-            ['name' => 'غوط الشعال'],
-            ['name' => 'الدريبي'],
-            ['name' => 'طريق المطار'],
-            ['name' => 'صلاح الدين'],
-            ['name' => 'طريق السور'],
-            ['name' => 'بن غشير'],
-            ['name' => 'الظهرة'],
-            ['name' => 'فشلوم'],
-            ['name' => 'زاوية الدهماني'],
-            ['name' => 'المنصورة'],
-            ['name' => 'أبو نواس'],
-            ['name' => 'السراج'],
-            ['name' => 'جنزور'],
-            ['name' => 'تاجوراء - الوسط'],
-            ['name' => 'الـ 4 شوارع زناتة'],
+        // تعريف الهيكل: بلدية فرعية -> مناطقها
+        $data = [
+            'حي الأندلس' => ['حي الأندلس', 'قرجي', 'السياحية', 'غوط الشعال', 'السراج'],
+            'بوسليم' => ['بوسليم', 'الهضبة الخضراء', 'السبعة', 'الدريبي', 'طريق المطار', 'صلاح الدين'],
+            'سوق الجمعة' => ['سوق الجمعة', 'تاجوراء', 'تاجوراء - الوسط', 'النوفليين'],
+            'طرابلس المركز' => ['الظهرة', 'فشلوم', 'زاوية الدهماني', 'المنصورة', 'أبو نواس', 'بن غشير', 'طريق السور', 'الـ 4 شوارع زناتة'],
+            'جنزور' => ['جنزور'],
         ];
 
-        foreach ($zones as $zone) {
-            // لمنع التكرار في حال تشغيل الـ Seeder أكثر من مرة
-            Zone::firstOrCreate(['name' => $zone['name']]);
+        foreach ($data as $subName => $zones) {
+            // جلب أو إنشاء البلدية الفرعية (يجب أن تكون موجودة في جدول sub_municipalities)
+            $subMuni = SubMunicipality::firstOrCreate(['name' => $subName], [
+                'municipality_id' => 1 // استبدل بـ ID البلدية الكبرى المناسب
+            ]);
+
+            foreach ($zones as $zoneName) {
+                Zone::updateOrCreate(
+                    ['name' => $zoneName],
+                    ['sub_municipality_id' => $subMuni->id]
+                );
+            }
         }
     }
 }

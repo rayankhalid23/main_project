@@ -45,29 +45,15 @@ class DriverPreferenceController extends Controller
      */
     public function update(UpdateDriverPreferencesRequest $request): JsonResponse
     {
-        try {
-            $driver = $request->user()->driver;
-            if (!$driver) {
-                return response()->json(['status' => false, 'message' => 'ملف التعريف غير موجود.'], 404);
-            }
-
-            $updatedDriver = $this->preferenceService->updatePreferences($driver, $request->validated());
-
-            return response()->json([
-                'status'  => true,
-                'message' => 'تم تحديث تفضيلات العمل، نوع الاشتراك، ومناطق التغطية بنجاح بنظامك.',
-                'data'    => new DriverPreferenceResource($updatedDriver)
-            ], Response::HTTP_OK);
-
-        } catch (\Exception $e) {
-            // 💡 هذا السطر يقوم بتسجيل الخطأ مع تفاصيل المسار والملف والسطر (مهم جداً للمطورين)
-            \Log::error('Driver Preference Error: ' . $e->getMessage(), [
-                'driver_id' => $request->user()->driver->id,
-                'trace'     => $e->getTraceAsString()
-            ]);
-        
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
-        }
+        // نمرر البيانات كما هي (الـ Service هي المسؤولة عن تحويل الـ Enum إذا لزم الأمر)
+        $driver = $request->user()->driver;
+        $updatedDriver = $this->preferenceService->updatePreferences($driver, $request->validated());
+    
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم تحديث التفضيلات بنجاح.',
+            'data'    => new DriverPreferenceResource($updatedDriver)
+        ]);
     }
 
     /**

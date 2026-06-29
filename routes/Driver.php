@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Driver\DriverRegisterController;
 use App\Http\Controllers\Api\Driver\ProfileController;
 use App\Http\Controllers\Api\Driver\DriverPreferenceController;
 use App\Http\Controllers\Api\Driver\AddressController;
+use App\Http\Controllers\Api\Driver\ZoneController; // لا تنسَ هذا السطر في الأعلى
 /*
 |--------------------------------------------------------------------------
 | Driver Routes (تم إزالة الـ prefix التكراري ليطابق v1/driver مباشرة)
@@ -80,4 +81,8 @@ Route::middleware('auth:sanctum')->group(function () {
         
     Route::get('preferences/defaults', [DriverPreferenceController::class, 'defaults'])
         ->name('api.driver.preferences.defaults');
+
+    // مسار لعرض جميع المناطق المتاحة في النظام للسائق ليتمكن من اختيارها
+Route::get('zones', [ZoneController::class, 'index'])
+->name('api.driver.zones.index');    
 });

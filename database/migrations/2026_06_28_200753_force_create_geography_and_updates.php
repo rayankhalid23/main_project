@@ -43,8 +43,8 @@ return new class extends Migration
             $table->enum('subscription_type', ['daily', 'monthly', 'both'])->default('both')->after('shift');
         });
 
-        // 6. إنشاء جدول الربط المتعدد بين السائق والمناطق الدقيقة (driver_zones)
-        Schema::create('driver_zones', function (Blueprint $table) {
+        // 6. إنشاء جدول الربط المتعدد بين السائق والمناطق الدقيقة (تأكد من مطابقة الاسم)
+        Schema::create('driver_zone', function (Blueprint $table) {
             $table->id();
             $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade');
             $table->foreignId('zone_id')->constrained('zones')->onDelete('cascade');

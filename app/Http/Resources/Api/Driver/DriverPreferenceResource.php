@@ -7,25 +7,28 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class DriverPreferenceResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    // app/Http/Resources/Api/Driver/DriverPreferenceResource.php
+
+    public function toArray($request): array
     {
+        // الحصول على المناطق مع بياناتها (يجب التأكد من وجود العلاقة zones)
+        $zones = $this->zones; 
+    
+        // تجميع المناطق حسب اسم البلدية الفرعية
+        $groupedZones = $zones->groupBy('subMunicipality.name')->map(function ($zonesGroup) {
+            $subMuni = $zonesGroup->first()->subMunicipality;
+            return [
+                'municipality_name'     => $subMuni->municipality->name,
+                'sub_municipality_name' => $subMuni->name,
+                'zones' => $zonesGroup->map(fn($z) => ['id' => $z->id, 'name' => $z->name])
+            ];
+        });
+    
         return [
-            'driver_id'         => $this->id,
-            'shift'             => $this->shift->value,
-            'shift_txt'         => $this->shift->label(), // النص العربي للفترة من الـ Enum
-            'subscription_type' => $this->subscription_type, // الحقل الجديد المضاف
-            
-            // عرض المناطق الجغرافية مصحوبة ببياناتها الهرمية الكاملة (إيجر لودينج)
-            'zones'             => $this->zones->map(function ($zone) {
-                return [
-                    'zone_id'              => $zone->id,
-                    'zone_name'            => $zone->name,
-                    'sub_municipality_id'  => $zone->sub_municipality_id,
-                    'sub_municipality_name'=> $zone->subMunicipality?->name,
-                    'municipality_id'      => $zone->subMunicipality?->municipality_id,
-                    'municipality_name'    => $zone->subMunicipality?->municipality?->name,
-                ];
-            })
+            'driver_id' => $this->id,
+            'shift'     => $this->shift,
+            'subscription_type' => $this->subscription_type,
+            'coverage' => $groupedZones // هنا تظهر الهيكلية الجديدة
         ];
     }
 }

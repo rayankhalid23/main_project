@@ -51,11 +51,13 @@ class Driver extends Model
      * 🗺️ علاقة السائق بالمناطق المخصصة للعمل (Many-to-Many)
      * تربط السائق بالمناطق الدقيقة المتعددة التي يغطيها عبر الجدول الوسيط driver_zones
      */
-    public function zones(): BelongsToMany
-    {
-        return $this->belongsToMany(Zone::class, 'driver_zones');
-    }
-
+   // في ملف App\Models\Driver\Driver.php
+   public function zones(): BelongsToMany
+   {
+       // يجب أن تتطابق 'driver_zone' تماماً
+       return $this->belongsToMany(\App\Models\Shared\Zone::class, 'driver_zone', 'driver_id', 'zone_id')
+                   ->withTimestamps();
+   }
     /**
      * علاقة مع المستخدم (حساب السائق الأساسي)
      */
