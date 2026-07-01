@@ -4,21 +4,22 @@ namespace App\Http\Requests\Api\Parent;
 
 class UpdateChildRequest extends StoreChildRequest
 {
-    /**
-     * في التعديل، نقوم بتعديل الشروط لتصبح متوافقة مع عملية التحديث (مثلاً جعل الحقول متواجدة فقط في حال إرسالها)
-     */
     public function rules(): array
     {
         $rules = parent::rules();
         
-        // تحويل القيود لتتماشى مع التحديث (أحياناً نكتفي بوضع 'sometimes' قبل القيود)
+        // 1. تحويل جميع القواعد إلى 'sometimes'
         foreach ($rules as $field => $rule) {
             if (is_string($rule)) {
-                $rules[$field] = 'sometimes|' . $rule;
+                $rules[$field] = 'sometimes|' . str_replace('required|', '', $rule);
             } elseif (is_array($rule)) {
-                array_unshift($rules[$field], 'sometimes');
+                // إذا كانت مصفوفة، نضمن وجود 'sometimes' ونحذف 'required' إذا وجدت
+                $rules[$field] = array_merge(['sometimes'], array_diff($rule, ['required']));
             }
         }
+
+        // 2. حماية حقل الـ QR Code (يُمنع تعديله تماماً)
+        unset($rules['qr_code_token']);
 
         return $rules;
     }

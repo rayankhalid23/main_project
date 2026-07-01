@@ -5,86 +5,77 @@ namespace App\Models\Parent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
-// تأكد من مسار ParentModel الصحيح لديك، إذا كان داخل مجلد Parent أو المجلد الرئيسي Models
-use App\Models\ParentModel; 
+use App\Models\ParentModel; // تأكد من المسار الصحيح
 
 class Child extends Model
 {
-    // تحديد اسم الجدول في قاعدة البيانات
     protected $table = 'children';
-    public $timestamps = false;
 
-    /**
-     * الحقول القابلة للتعبئة بشكل جماعي (Mass Assignable)
-     */
+    // يفضل تفعيل timestamps إذا كانت موجودة في الـ Migration، 
+    // وإلا اتركها false كما هي في كودك القديم
+    public $timestamps = true;
+
     protected $fillable = [
         'parent_id',
         'school_id',
-        'home_address_id',
+        'address_id',
         'full_name',
         'birth_date',
-        'grade', // تأكد من وجوده هنا
-        'notification_radius',
-        'daily_status',
         'gender',
-'pickup_time',
-'dropoff_time',
-        'photo_url', // تم التعديل ليتطابق مع الـ DB
+        'grade',
+        'photo_url',
         'medical_notes',
-        'preferred_time_slot',
-        'qr_code_token' // تم التعديل ليتطابق مع الـ DB
+        'notification_radius',
+        'qr_code_token',
     ];
 
-    /**
-     * عمل حقل الـ birth_date ككائن Carbon تلقائياً لسهولة التعامل مع التواريخ
-     */
     protected $casts = [
         'birth_date' => 'date',
     ];
 
     /**
-     * الدالة المدمجة (Boot Method) للتحكم في الأحداث (Eloquent Events)
+     * توليد توكن فريد للـ QR Code تلقائياً عند إنشاء الطفل
      */
     protected static function booted(): void
     {
         parent::booted();
-    
+
         static::creating(function ($child) {
-            // توليد الـ Token للحقل الصحيح في قاعدة البيانات
-            $child->qr_code_token = 'CHLD-' . \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(6)) . '-' . time();
+            $child->qr_code_token = 'CHLD-' . Str::upper(Str::random(6)) . '-' . time();
         });
     }
 
     /**
-     * =========================================================================
-     * العلاقات البرمجية (Eloquent Relationships)
-     * =========================================================================
+     * =========================================
+     * العلاقات (Relationships)
+     * =========================================
      */
 
-    /**
-     * علاقة الطفل بولي أمره
-     */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(ParentModel::class, 'parent_id');
     }
+    public function logistics()
+    {
+        // الطفل لديه سجل لوجستي واحد في جدول child_logistics
+        return $this->hasOne(\App\Models\Parent\ChildLogistics::class, 'child_id', 'id');
+    }
 
-    
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Parent\School::class, 'school_id');
+    }
+
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Parent\Address::class, 'address_id');
+    }
+
     /**
-     * حساب عمر الطفل الحالي تلقائياً بناءً على تاريخ ميلاده
+     * الملحقات (Attributes)
      */
     public function getAgeAttribute(): int
     {
         return $this->birth_date ? $this->birth_date->age : 0;
     }
-
-    public function school(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-{
-    return $this->belongsTo(\App\Models\Parent\School::class, 'school_id');
-}
-
-public function address(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-{
-    return $this->belongsTo(\App\Models\Parent\Address::class, 'home_address_id');
-}
 }

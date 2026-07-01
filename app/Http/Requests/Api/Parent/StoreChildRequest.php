@@ -3,80 +3,72 @@
 namespace App\Http\Requests\Api\Parent;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class StoreChildRequest extends FormRequest
 {
-    /**
-     * تحديد ما إذا كان المستخدم مخولاً لإجراء هذا الطلب.
-     */
     public function authorize(): bool
     {
-        // تفعيل التحقق (يمكن ربطها بصلاحيات ولي الأمر لاحقاً)
         return true; 
     }
 
-    /**
-     * شروط التحقق الصارمة والمتوافقة مع متطلباتك وقاعدة البيانات
-     */
-    public function rules(): 
+    public function rules(): array
     {
-        // حساب التواريخ ديناميكياً بناءً على الشروط (من 6 إلى 21 سنة)
-        $minDate = Carbon::now()->subYears(21)->format('Y-m-d'); // أقصى حد للعمر 21 سنة (تاريخ ميلاد قديم)
-        $maxDate = Carbon::now()->subYears(6)->format('Y-m-d');  // أقل حد للعمر 6 سنوات (تاريخ ميلاد حديث)
+        $minDate = Carbon::now()->subYears(21)->format('Y-m-d');
+        $maxDate = Carbon::now()->subYears(6)->format('Y-m-d');
 
         return [
-            'parent_id'       => 'required|exists:parents,id',
-            'school_id'       => 'required|exists:schools,id',
-            'home_address_id' => 'required|exists:addresses,id',
-            
-            // شرط الاسم الثلاثي: يجب أن يحتوي على 3 كلمات على الأقل يفصل بينها فراغ، ويدعم الحروف العربية
-            'full_name'       => [
-                'required',
-                'string',
-                'min:8',
-                'max:150',
-                'regex:/^[\p{L}]+([\s]+[\p{L}]+){2,}$/u'
-            ],
-            
-            // شرط العمر: يجب أن يكون التاريخ بين الـ 6 والـ 21 سنة بناءً على حسابات Carbon المسبقة
-            'birth_date'      => "required|date|after_or_equal:{$minDate}|before_or_equal:{$maxDate}",
-            
-            'grade'           => 'required|string|max:50',
-            
-            // الصورة اختيارية، ولكن إذا رُفعت يجب أن تكون ملف صورة حقيقي وبحجم معقول
-            'photo'           => 'nullable|image|mimes:jpeg,png,jpg|max:2048', 
+            'parent_id'           => 'required|exists:users,id',
+            'school_id'           => 'required|exists:schools,id',
+            'address_id'          => 'required|exists:addresses,id',
+            'full_name'           => ['required', 'string', 'min:8', 'max:150', 'regex:/^[\p{L}]+([\s]+[\p{L}]+){2,}$/u'],
+            'birth_date'          => "required|date|after_or_equal:{$minDate}|before_or_equal:{$maxDate}",
+            'gender'              => ['required', Rule::in(['male', 'female'])],
+            'grade'               => 'required|integer|min:1|max:12',
+            'photo'               => 'nullable|image|mimes:jpeg,png,jpg|max:2048', 
             'medical_notes'       => 'nullable|string|max:1000',
-            
-            // الملاحظات الطبية اختيارية
-            'medical_notes'   => 'nullable|string|max:1000',
+            'notification_radius' => 'nullable|integer|min:100|max:5000',
+
+            // البيانات اللوجستية والاشتراك
+            'preferred_time_slot' => ['required', Rule::in(['morning', 'evening', 'both'])],
+            'trip_direction'      => ['required', Rule::in(['go', 'return', 'both'])],
+            'pickup_time'         => 'nullable|date_format:H:i',
+            'dropoff_time'        => 'nullable|date_format:H:i',
+            'start_date'          => 'required|date|after_or_equal:today',
+            'end_date'            => 'required|date|after:start_date',
+            'subscription_type'   => ['required', Rule::in(['daily', 'monthly'])],
         ];
     }
 
-    /**
-     * تخصيص رسائل الخطأ لتظهر باللغة العربية بشكل احترافي للمستخدم النهائي
-     */
     public function messages(): array
     {
         return [
-            'full_name.required' => 'الاسم الثلاثي للطفل مطلوب ولا يمكن تركه فارغاً.',
-            'full_name.regex'    => 'يجب إدخال الاسم ثلاثياً بشكل صحيح (مثال: أحمد محمد علي).',
-            'birth_date.required'=> 'تاريخ ميلاد الطفل مطلوب.',
-            'birth_date.date'    => 'صيغة تاريخ الميلاد غير صحيحة.',
+            // البيانات الأساسية
+            'full_name.required'         => 'الاسم الثلاثي مطلوب.',
+            'full_name.regex'            => 'يرجى إدخال الاسم الثلاثي باللغة العربية بشكل صحيح.',
             'birth_date.after_or_equal'  => 'عمر الطفل لا يمكن أن يتجاوز 21 سنة.',
-            'birth_date.before_or_equal' => 'يجب أن يكون عمر الطفل 6 سنوات على الأقل للتسجيل.',
-            'photo.image'        => 'الملف المرفوع يجب أن يكون صورة.',
-            'photo.max'          => 'حجم الصورة يجب أن لا يتجاوز 2 ميجابايت.',
-            'parent_id.exists'   => 'ولي الأمر المحدد غير موجود في النظام.',
-            'school_id.exists'   => 'المدرسة المحددة غير موجودة في طرابلس.',
-            'home_address_id.exists' => 'العنوان المحدد غير موجود.',
-            // رسائل خطأ الملاحظات الطبية
-            'medical_notes.string'   => 'يجب أن تكون الملاحظات الطبية عبارة عن نص مبرمج بشكل صحيح.',
-            'medical_notes.max'      => 'لا يمكن أن تتجاوز الملاحظات الطبية 1000 حرف.',
+            'birth_date.before_or_equal' => 'عمر الطفل لا يمكن أن يقل عن 6 سنوات.',
+            'gender.in'                  => 'يرجى تحديد جنس الطفل (ذكر أو أنثى).',
+            'grade.required'             => 'يرجى تحديد الصف الدراسي.',
+            'photo.image'                => 'يجب أن يكون الملف المرفوع صورة صالحة.',
+            'photo.max'                  => 'حجم الصورة كبير جداً، الحد الأقصى 2 ميجابايت.',
             
-            // رسائل خطأ الفترة الزمنية المفضلة
-            'preferred_time_slot.required' => 'يجب تحديد الفترة الزمنية المفضلة للطفل (صباحية، مسائية، أو كلاهما).',
-            'preferred_time_slot.in'       => 'القيمة المحددة للفترة الزمنية غير صالحة، يجب الاختيار من القيم المعتمدة فقط.',
+            // اللوجستيات
+            'preferred_time_slot.required' => 'يجب اختيار الفترة الزمنية المفضلة.',
+            'preferred_time_slot.in'       => 'الفترة المختارة غير صالحة.',
+            'trip_direction.required'      => 'يجب تحديد اتجاه الرحلة.',
+            'trip_direction.in'            => 'اتجاه الرحلة غير صالح.',
+            'pickup_time.date_format'      => 'صيغة وقت الالتقاط يجب أن تكون HH:MM.',
+            'dropoff_time.date_format'     => 'صيغة وقت التوصيل يجب أن تكون HH:MM.',
+            
+            // رسائل الاشتراكات الجديدة
+            'start_date.required'        => 'تاريخ بدء الاشتراك مطلوب.',
+            'start_date.after_or_equal'  => 'تاريخ البدء يجب أن يكون اليوم أو في المستقبل.',
+            'end_date.required'          => 'تاريخ انتهاء الاشتراك مطلوب.',
+            'end_date.after'             => 'تاريخ الانتهاء يجب أن يأتي بعد تاريخ البدء.',
+            'subscription_type.required' => 'يجب اختيار نوع الاشتراك.',
+            'subscription_type.in'       => 'نوع الاشتراك غير صحيح (يجب أن يكون يومي أو شهري).',
         ];
     }
 }

@@ -22,7 +22,7 @@ class ParentRegisterRequest extends FormRequest
             'alternative_phone'     => 'nullable|string|min:7',
             'password'              => 'required|string|min:7|regex:/^(?=.*[0-9])(?=.*[a-zA-Z])(?!.*[!@#$%^&*]).+$/',
             'password_confirmation' => 'required|same:password',
-            'otp'                   => 'required|numeric|digits:6'
+            'otp'                   => 'required|numeric|digits:6',
 
             'device_name'           => 'nullable|string',
             'platform'              => 'nullable|string',

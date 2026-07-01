@@ -10,19 +10,23 @@ class SchoolSeeder extends Seeder
     public function run(): void
     {
         $schools = [
-            // لاحظ استخدام 'address' بدلاً من 'address_text'
-            ['name' => 'مدرسة طرابلس المركزية للتعليم الأساسي (بنين)', 'lat' => 32.8872, 'lng' => 13.1913, 'address' => 'طرابلس المركز - محلة بلخير', 'zone_id' => 1, 'status' => 'active'],
-            ['name' => 'مدرسة النصر للتعليم الثانوي (بنات)', 'lat' => 32.8815, 'lng' => 13.1820, 'address' => 'طرابلس المركز - شارع الصريم', 'zone_id' => 1, 'status' => 'active'],
-            ['name' => 'مدرسة حطين للتعليم الأساسي', 'lat' => 32.8910, 'lng' => 13.2450, 'address' => 'سوق الجمعة - شرفة الملاحة', 'zone_id' => 2, 'status' => 'active'],
-            ['name' => 'مدرسة شهداء النوفليين للتعليم الأساسي', 'lat' => 32.8760, 'lng' => 13.2120, 'address' => 'سوق الجمعة - محلة النوفليين', 'zone_id' => 2, 'status' => 'active'],
-            ['name' => 'مدرسة الفجر الجديد للتعليم الأساسي', 'lat' => 32.8790, 'lng' => 13.1340, 'address' => 'حي الأندلس - الشارع الرئيسي', 'zone_id' => 3, 'status' => 'active'],
-            ['name' => 'مدرسة غوط الشعال الثانوية (بنين)', 'lat' => 32.8640, 'lng' => 13.1250, 'address' => 'حي الأندلس - منطقة غوط الشعال', 'zone_id' => 3, 'status' => 'active'],
+            ['name' => 'مدرسة طرابلس المركزية', 'zone_name' => 'زاوية الدهماني', 'lat' => 32.88, 'lng' => 13.19, 'address' => 'طرابلس', 'status' => 'active'],
+            ['name' => 'مدرسة حطين', 'zone_name' => 'شرفة الملاحة', 'lat' => 32.89, 'lng' => 13.24, 'address' => 'سوق الجمعة', 'status' => 'active'],
         ];
 
         foreach ($schools as $school) {
+            // جلب الـ ID الخاص بالمنطقة بناءً على اسمها
+            $zone = DB::table('zones')->where('name', $school['zone_name'])->first();
+
             DB::table('schools')->updateOrInsert(
                 ['name' => $school['name']], 
-                $school
+                [
+                    'zone_id' => $zone ? $zone->id : null, 
+                    'lat' => $school['lat'],
+                    'lng' => $school['lng'],
+                    'address' => $school['address'],
+                    'status' => $school['status']
+                ]
             );
         }
     }

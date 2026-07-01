@@ -144,18 +144,32 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->unique()->constrained('users')->onDelete('cascade')->onUpdate('cascade');
             
-            // التعديل: جعل الحقول التي تدخل في المرحلة الثانية اختيارية
+            // 1. بيانات الوثائق الشخصية
             $table->string('national_id', 50)->unique()->nullable(); 
             $table->string('license_number', 50)->unique()->nullable();
             $table->date('license_expiry')->nullable();
             
-            // التعديل: القيمة الافتراضية يجب أن تتوافق مع منطق التسجيل (Offline هو الأفضل)
+            // 2. الحالة والوردية (Shift)
             $table->enum('status', ['Pending', 'Approved', 'Suspended', 'Rejected', 'Offline', 'ON_TRIP'])->default('Offline');
+            
+            /**
+             * 1 => صباحي, 2 => مسائي, 3 => الفترتين معاً
+             */
+            $table->tinyInteger('shift')->default(1)->comment('1: Morning, 2: Evening, 3: Both');
+            
+            // 3. التفضيلات الجديدة (المتطلبات التي طلبتها)
+            $table->enum('subscription_type', ['daily', 'monthly', 'both'])->default('both');
+            $table->enum('accepted_gender', ['male', 'female', 'both'])->default('both');
+            $table->json('preferred_grades')->nullable(); // مصفوفة الصفوف (مثلاً [1, 2, 6])
+            
             $table->enum('gender', ['male', 'female'])->default('male');
             
+            // 4. بيانات الموقع الجغرافي
             $table->decimal('current_lat', 10, 8)->nullable();
             $table->decimal('current_lng', 11, 8)->nullable();
             $table->timestamp('last_ping_at')->nullable();
+            
+            // 5. الإحصائيات والتقييم
             $table->decimal('rating_avg', 3, 2)->default(5.00);
             $table->integer('completed_trips_count')->default(0);
             $table->integer('total_subs_count')->default(0);
@@ -163,12 +177,15 @@ return new class extends Migration
             $table->integer('cancelled_by_driver_count')->default(0);
             $table->integer('cancelled_by_parent_count')->default(0);
             $table->decimal('retention_rate', 5, 2)->default(100.00);
-        
+            
+            $table->timestamps();
+
+            // الفهارس (Indexes) لضمان سرعة البحث
             $table->index('status');
             $table->index(['current_lat', 'current_lng']);
             $table->index('last_ping_at');
         });
-
+    
         // =====================================================
         // [ 9 ] جدول المركبات (vehicles)
         // =====================================================
@@ -208,13 +225,23 @@ return new class extends Migration
         // =====================================================
         Schema::create('addresses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('parent_id')->constrained('parents')->onDelete('cascade')->onUpdate('cascade');
+            // الربط بجدول المستخدمين (Parents)
+            $table->foreignId('parent_id')->constrained('users')->onDelete('cascade')->onUpdate('cascade');
+            
             $table->string('label', 100)->nullable();
             $table->decimal('lat', 10, 8);
             $table->decimal('lng', 11, 8);
-            $table->tinyInteger('is_default')->default(0);
+            $table->boolean('is_default')->default(false); // تحويلها لـ boolean هي الممارسة الأفضل
 
+            // إضافة الحذف الناعم (يدير تلقائياً عمود deleted_at)
+            $table->softDeletes();
+            
+            $table->timestamps();
+
+            // الفهارس لسرعة الاستعلام
             $table->index('parent_id');
+            $table->index(['lat', 'lng']);
+            $table->foreignId('zone_id')->nullable()->constrained('zones')->nullOnDelete();
         });
 
         // =====================================================
@@ -223,12 +250,47 @@ return new class extends Migration
         Schema::create('schools', function (Blueprint $table) {
             $table->id();
             $table->string('name', 150);
+            
+            // ربط المدرسة بمنطقة (نوصي به لسهولة الفلترة والبحث)
+            $table->foreignId('zone_id')->nullable()->constrained('zones')->nullOnDelete();
+            
             $table->decimal('lat', 10, 8);
             $table->decimal('lng', 11, 8);
-            $table->text('address_text')->nullable();
-            $table->enum('status', ['approved', 'pending'])->default('approved');
-
+            
+            // تم تغيير الاسم من address_text إلى address
+            $table->string('address')->nullable();
+            
+            // تم ضبط الطول ليكون 20 حرفاً
+            $table->string('status', 20)->default('approved');
+    
+            $table->timestamps();
+    
             $table->index(['lat', 'lng']);
+        });
+
+        // 1. إنشاء جدول البلديات الرئيسية
+        Schema::create('municipalities', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 100);
+            $table->timestamps();
+        });
+
+        // 2. إنشاء جدول البلديات الأصغر
+        Schema::create('sub_municipalities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('municipality_id')->constrained('municipalities')->onDelete('cascade');
+            $table->string('name', 100);
+            $table->timestamps();
+        });
+
+        // 6. إنشاء جدول الربط المتعدد بين السائق والمناطق الدقيقة (تأكد من مطابقة الاسم)
+        Schema::create('driver_zone', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade');
+            $table->foreignId('zone_id')->constrained('zones')->onDelete('cascade');
+            $table->timestamps();
+
+            $table->unique(['driver_id', 'zone_id']);
         });
 
         // =====================================================
@@ -236,22 +298,45 @@ return new class extends Migration
         // =====================================================
         Schema::create('children', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('parent_id')->constrained('parents')->onDelete('restrict')->onUpdate('cascade');
-            $table->foreignId('school_id')->constrained('schools')->onDelete('restrict')->onUpdate('cascade');
-            $table->string('full_name', 150);
-            $table->date('birth_date')->nullable();
-            $table->string('grade');
-            $table->foreignId('home_address_id')->constrained('addresses')->onDelete('restrict')->onUpdate('cascade');
-            $table->integer('notification_radius')->default(500);
-            $table->string('qr_code_token', 255)->unique()->nullable();
-            $table->enum('daily_status', ['present', 'absent'])->default('present');
-            $table->string('photo_url', 500)->nullable();
+            $table->foreignId('parent_id')->constrained('users')->onDelete('cascade');
+            
+            // ربط المدرسة والعنوان
+            $table->foreignId('school_id')->nullable()->constrained('schools')->nullOnDelete();
+            $table->foreignId('address_id')->nullable()->constrained('addresses')->nullOnDelete();
+            
+            $table->string('full_name');
+            $table->date('birth_date');
+            $table->enum('gender', ['male', 'female']);
+            $table->tinyInteger('grade')->unsigned();
+            $table->string('photo_url')->nullable();
             $table->text('medical_notes')->nullable();
-            $table->enum('preferred_time_slot', ['MORNING', 'EVENING', 'BOTH'])->default('BOTH');
+            
+            // الحقول الجديدة للإشعارات والـ QR
+            // القيمة الافتراضية 500 متر
+            $table->integer('notification_radius')->default(500); 
+            // التوكن الخاص بالـ QR، يجب أن يكون فريداً لضمان عدم تكرار الهوية
+            $table->string('qr_code_token')->unique(); 
+            
+            $table->timestamps();
+        });
 
-            $table->index('parent_id');
-            $table->index('school_id');
-            $table->index('qr_code_token');
+        Schema::create('child_logistics', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('child_id')->constrained('children')->onDelete('cascade');
+            
+            // تفاصيل النقل
+            $table->enum('preferred_time_slot', ['morning', 'evening', 'both']);
+            $table->time('pickup_time')->nullable();
+            $table->time('dropoff_time')->nullable();
+            $table->enum('trip_direction', ['go', 'return', 'both']);
+            
+            // بيانات الاشتراك الجديدة
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
+            $table->enum('subscription_type', ['daily', 'monthly'])->default('monthly');
+            
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
         });
 
         // =====================================================
@@ -314,23 +399,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // =====================================================
-        // [ 15 ] جدول طلبات تعديل البيانات الحساسة للسائقين (driver_profile_changes)
-        // =====================================================
-        Schema::create('driver_profile_changes', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade')->onUpdate('cascade');
-            $table->json('old_values'); // قيم الحقول القديمة قبل التغيير للمقارنة
-            $table->json('new_values'); // قيم الحقول الجديدة المطلوبة للتحديث
-            $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
-            $table->string('rejection_reason', 500)->nullable(); // سبب الرفض إن وجد
-            $table->foreignId('action_by')->nullable()->constrained('admins')->onDelete('restrict'); // الأدمن المسؤول عن القرار
-            $table->timestamp('created_at')->useCurrent();
-            $table->timestamp('action_at')->nullable(); // وقت اتخاذ قرار القبول أو الرفض
-
-            $table->index('driver_id');
-            $table->index('status');
-        });
+        
 
         // =====================================================
         // [ 15 ] جدول الطلبات (requests) - تم التحديث ليدعم تفاصيل الاشتراكات
@@ -435,34 +504,22 @@ return new class extends Migration
         // =====================================================
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('request_child_id')->constrained('request_children')->onDelete('restrict')->onUpdate('cascade');
-            $table->foreignId('parent_id')->constrained('parents')->onDelete('restrict')->onUpdate('cascade');
-            $table->foreignId('child_id')->constrained('children')->onDelete('restrict')->onUpdate('cascade');
-            $table->foreignId('driver_id')->constrained('drivers')->onDelete('restrict')->onUpdate('cascade');
-            $table->foreignId('home_address_id')->constrained('addresses')->onDelete('restrict')->onUpdate('cascade');
-            $table->foreignId('school_id')->constrained('schools')->onDelete('restrict')->onUpdate('cascade');
-            $table->enum('contract_type', ['يومي', 'أسبوعي', 'شهري', 'فصلي']);
-            $table->enum('direction', ['ذهاب', 'عودة', 'إياب']);
-            $table->tinyInteger('parent_approval')->default(1);
-            $table->tinyInteger('driver_approval')->default(1);
+            $table->foreignId('child_id')->constrained('children')->onDelete('cascade');
+            $table->foreignId('parent_id')->constrained('users');
+            $table->foreignId('driver_id')->constrained('drivers');
+            $table->enum('contract_type', ['daily', 'weekly', 'monthly', 'seasonal']);
+            $table->enum('status', ['pending', 'active', 'cancelled', 'expired'])->default('pending');
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('trip_price', 10, 2);
-            $table->decimal('initial_amount', 10, 2);
-            $table->integer('total_trips');
-            $table->integer('remaining_trips');
-            $table->enum('payment_status', ['Paid', 'Unpaid', 'Partial'])->default('Unpaid');
-            $table->tinyInteger('is_auto_renew')->default(0);
-            $table->enum('status', ['Pending_Approval', 'Active', 'Cancelled', 'Expired'])->default('Active');
-            $table->decimal('paid_amount', 10, 2)->default(0.00);
-            $table->decimal('remaining_amount', 10, 2)->default(0.00);
-            $table->timestamp('created_at')->useCurrent();
-
-            $table->index('parent_id');
-            $table->index('child_id');
-            $table->index('driver_id');
-            $table->index('status');
+            $table->decimal('paid_amount', 10, 2)->default(0);
+            $table->enum('payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
+            $table->boolean('is_auto_renew')->default(false);
+            $table->timestamps();
+    
+            // إندكس للبحث المالي
             $table->index(['start_date', 'end_date']);
+            $table->index('status');
             $table->index('payment_status');
         });
 
@@ -646,6 +703,73 @@ return new class extends Migration
             $table->index('actor_id');
             $table->index('target_id');
         });
+        Schema::create('driver_profile_changes', function (Blueprint $table) {
+            $table->id();
+            
+            // ربط خارجي مع جدول السائقين مع التحديث والحذف التلقائي
+            $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade')->onUpdate('cascade');
+            
+            // القيم القديمة والجديدة بصيغة JSON لمرونة الحقول
+            $table->json('old_values')->nullable(); // nullable لتفادي الأخطاء إذا كانت البيانات السابقة فارغة
+            $table->json('new_values'); 
+            
+            // حالة الطلب وسبب الرفض إن وجد
+            $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->string('rejection_reason', 500)->nullable(); 
+            
+            // الأدمن المسؤول عن اتخاذ القرار (مرتبط بجدول admins)
+            $table->foreignId('action_by')->nullable()->constrained('admins')->onDelete('restrict'); 
+            
+            // التوقيتات القياسية وتوقيت اتخاذ القرار
+            $table->timestamps(); 
+            $table->timestamp('action_at')->nullable(); 
+        
+            // الفهارس (Indexes) لضمان سرعة الاستعلام والفلترة داخل لوحة التحكم
+            $table->index('driver_id');
+            $table->index('status');
+        });
+
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedSmallInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->text('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable()->index();
+            $table->timestamps();
+        });
+        Schema::create('driver_addresses', function (Blueprint $table) {
+            $table->id();
+            // ربط إجباري بجدول السائقين (وليس Nullable) لضمان سلامة البيانات
+            $table->foreignId('driver_id')->constrained('drivers')->onDelete('cascade');
+            $table->string('label', 100); // مثل: الموقف الرئيسي
+            $table->decimal('lat', 10, 8); // تخزين دقيق للإحداثيات جغرافياً
+            $table->decimal('lng', 11, 8);
+            $table->boolean('is_default')->default(false);
+            $table->timestamps();
+            $table->softDeletes(); // دعم الحذف الناعم للأمان
+        });
+
+        // 1. جدول المناطق الأساسي في طرابلس
+        Schema::create('zones', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('sub_municipality_id')->constrained('sub_municipalities')->onDelete('cascade');
+            $table->string('name', 100);
+            $table->timestamps();
+        });
+
+       
 
         // إعادة تفعيل قيود العلاقات الأجنبية فور الانتهاء التام
         Schema::enableForeignKeyConstraints();

@@ -10,19 +10,18 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-{
-    Schema::table('schools', function (Blueprint $table) {
-        // نغير نوع العمود ليقبل نصوصاً تصل إلى 20 حرفاً
-        $table->string('status', 20)->change();
-    });
-}
+    {
+        Schema::table('child_logistics', function (Blueprint $table) {
+            //
+        });
+    }
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::table('schools', function (Blueprint $table) {
+        Schema::table('child_logistics', function (Blueprint $table) {
             //
         });
     }

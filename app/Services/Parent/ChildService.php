@@ -13,13 +13,48 @@ class ChildService
      */
     public function createChild(array $data): Child
     {
-        if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-            // تخزين المسار داخل المفتاح المطابق لقاعدة البيانات photo_url
-            $data['photo_url'] = $this->uploadPhoto($data['photo']);
-            unset($data['photo']); // حذف المفتاح القديم من المصفوفة
+        // 1. التحقق من التكرار
+        $exists = Child::where('parent_id', $data['parent_id'])
+                       ->where('full_name', $data['full_name'])
+                       ->exists();
+    
+        if ($exists) {
+            throw new \Illuminate\Validation\ValidationException(
+                \Illuminate\Support\Facades\Validator::make([], []), 
+                response()->json([
+                    'status' => false, 
+                    'message' => 'هذا الطفل مضاف مسبقاً في حسابك.'
+                ], 422)
+            );
         }
     
-        return Child::create($data);
+        // 2. استخدام Transaction
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            
+            // معالجة الصورة
+            if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
+                $data['photo_url'] = $this->uploadPhoto($data['photo']);
+                unset($data['photo']);
+            }
+    
+            // إنشاء الطفل (تأكد أن حقول logistics ليست ضمن $data الأساسية للطفل)
+            // نقوم بفلترة البيانات أو استخدام المصفوفة المباشرة
+            $child = Child::create($data);
+    
+            // 3. إضافة بيانات الـ Logistics مع الحقول الجديدة
+            $child->logistics()->create([
+                'preferred_time_slot' => $data['preferred_time_slot'],
+            'trip_direction'      => $data['trip_direction'],
+            'pickup_time'         => $data['pickup_time'] ?? null,
+            'dropoff_time'        => $data['dropoff_time'] ?? null,
+            'start_date'          => $data['start_date'],
+            'end_date'            => $data['end_date'],
+            'subscription_type'   => $data['subscription_type'],
+            'is_active'           => true,
+            ]);
+    
+            return $child;
+        });
     }
 
     /**
@@ -27,17 +62,17 @@ class ChildService
      */
     public function updateChild(Child $child, array $data): Child
     {
-        // 1. إذا قام ولي الأمر برفع صورة جديدة
+        // 1. تأمين البيانات: نمنع تعديل الـ token يدوياً من الـ Request
+        unset($data['qr_code_token']);
+
+        // 2. إذا قام ولي الأمر برفع صورة جديدة
         if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-            // حذف الصورة القديمة باستخدام الحقل الصحيح photo_url
             $this->deletePhoto($child->photo_url);
-            
-            // رفع الصورة الجديدة وتخزينها في الحقل الصحيح
             $data['photo_url'] = $this->uploadPhoto($data['photo']);
-            unset($data['photo']); // حذف المفتاح القديم لتفادي مشاكل الـ Mass Assignment
+            unset($data['photo']);
         }
 
-        // 2. تحديث البيانات في قاعدة البيانات
+        // 3. تحديث البيانات
         $child->update($data);
 
         return $child;

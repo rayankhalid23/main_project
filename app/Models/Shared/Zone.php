@@ -25,8 +25,9 @@ class Zone extends Model
      * ملاحظة: تم التأكد من اسم الجدول الوسيط (driver_zones) كما اتفقنا سابقاً
      */
     public function drivers(): BelongsToMany
-    {
-        return $this->belongsToMany(Driver::class, 'driver_zones', 'zone_id', 'driver_id')
-                    ->withTimestamps();
-    }
+{
+    // تأكد من استخدام 'driver_zone' كما هو في قاعدة بياناتك
+    return $this->belongsToMany(\App\Models\Driver\Driver::class, 'driver_zone', 'zone_id', 'driver_id')
+                ->withTimestamps();
+}
 }

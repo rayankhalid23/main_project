@@ -6,12 +6,26 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Seed the application's database.
+     */
     public function run(): void
     {
         $this->call([
-            SchoolSeeder::class,      // 1. المدارس
-            ClauseSeeder::class,      // 2. الشروط
-            SystemInitialSeeder::class, // 3. الأدوار والمستخدمين والبيانات الأخرى
+            // 1. بناء الهيكل الجغرافي (البلديات والمناطق) أولاً
+            TripoliGeographySeeder::class,
+
+            // 2. بناء المدارس بعد توفر الـ Zones في قاعدة البيانات
+            SchoolSeeder::class,
+
+            // 3. بناء الشروط والأحكام
+            ClauseSeeder::class,
+
+            // 4. بناء البيانات الأساسية للنظام (الصلاحيات، الأدوار، المستخدمين الافتراضيين)
+            SystemInitialSeeder::class,
+            
+            // ملاحظة: ZoneSeeder تم دمجه منطقياً ضمن TripoliGeographySeeder، 
+            // إذا كان لا يزال يحتوي على بيانات فريدة، يمكنك إضافته هنا.
         ]);
     }
 }

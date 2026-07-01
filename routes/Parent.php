@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\Parent\ChildrenController;
 use App\Http\Controllers\Api\Parent\AddressController;
 use App\Http\Controllers\Api\Parent\ParentSchoolController;
 use App\Http\Controllers\Api\Admin\ZoneController;
-use App\Http\Controllers\Api\Parent\ParentDriverSearchController;
+use App\Http\Controllers\Api\Parent\DriverSearchController;
 use App\Http\Controllers\Api\Admin\SchoolController;
 
 /*
@@ -68,6 +68,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('zones', [ZoneController::class, 'index']);
 
     // مسار بحث وفلترة السائقين المتقدم لولي الأمر
-    Route::post('drivers/search', [ParentDriverSearchController::class, 'index']);
+    Route::post('/drivers/search', [DriverSearchController::class, 'search']);
  
 });

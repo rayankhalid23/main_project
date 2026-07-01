@@ -53,11 +53,10 @@ class Driver extends Model
      */
    // في ملف App\Models\Driver\Driver.php
    public function zones(): BelongsToMany
-   {
-       // يجب أن تتطابق 'driver_zone' تماماً
-       return $this->belongsToMany(\App\Models\Shared\Zone::class, 'driver_zone', 'driver_id', 'zone_id')
-                   ->withTimestamps();
-   }
+{
+    // تأكد أن أسماء الأعمدة في الجدول الوسيط صحيحة (driver_id, zone_id)
+    return $this->belongsToMany(\App\Models\Shared\Zone::class, 'driver_zone', 'driver_id', 'zone_id');
+}
     /**
      * علاقة مع المستخدم (حساب السائق الأساسي)
      */
@@ -69,10 +68,13 @@ class Driver extends Model
     /**
      * علاقة مع المركبات التابعة للسائق
      */
-    public function vehicles(): HasMany
-    {
-        return $this->hasMany(Vehicle::class, 'driver_id');
-    }
+    // أضف هذه الدالة داخل كلاس Driver
+// داخل كلاس Driver
+public function vehicles(): \Illuminate\Database\Eloquent\Relations\HasMany
+{
+    // تأكد أن الموديل المستدعى هو App\Models\Driver\Vehicle
+    return $this->hasMany(\App\Models\Driver\Vehicle::class, 'driver_id');
+}
 
     /**
      * علاقة مع وثائق السائق (الرخصة، كتيب المركبة، إلخ)
