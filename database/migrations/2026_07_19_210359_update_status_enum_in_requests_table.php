@@ -12,8 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // استخدام استعلام SQL مباشر لتعديل الـ ENUM لضمان التوافق التام بدون تغيير البيانات الحالية
-        DB::statement("ALTER TABLE requests MODIFY COLUMN status ENUM('pending', 'accepted', 'rejected', 'contract_offered', 'cancelled') NOT NULL DEFAULT 'pending'");
+        // تنفيذ التعديل فقط إذا كانت قاعدة البيانات ليست SQLite
+        if (DB::getDriverName() !== 'sqlite') {
+            // استخدام استعلام SQL مباشر لتعديل الـ ENUM لضمان التوافق التام بدون تغيير البيانات الحالية
+            DB::statement("ALTER TABLE requests MODIFY COLUMN status ENUM('pending', 'accepted', 'rejected', 'contract_offered', 'cancelled') NOT NULL DEFAULT 'pending'");
+        }
     }
 
     /**
@@ -21,6 +24,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE requests MODIFY COLUMN status ENUM('pending', 'accepted', 'rejected', 'contract_offered') NOT NULL DEFAULT 'pending'");
+        // تنفيذ التراجع فقط إذا كانت قاعدة البيانات ليست SQLite
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE requests MODIFY COLUMN status ENUM('pending', 'accepted', 'rejected', 'contract_offered') NOT NULL DEFAULT 'pending'");
+        }
     }
 };

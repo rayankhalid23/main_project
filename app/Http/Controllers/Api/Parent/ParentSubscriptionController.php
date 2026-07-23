@@ -25,6 +25,12 @@ class ParentSubscriptionController extends Controller
      */
     public function store(StoreSubscriptionRequest $request): JsonResponse
     {
+        Log::info('Incoming parent subscription request data:', [
+            'user_id' => $request->user()?->id,
+            'ip'      => $request->ip(),
+            'payload' => $request->all(),
+        ]);
+
         try {
             $result = $this->subscriptionService->createRequest(
                 $request->validated(), 

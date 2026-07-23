@@ -37,7 +37,7 @@ class InvoiceController extends Controller
 
         return response()->json([
             'success'    => true,
-            'data'       => InvoiceResource::collection($invoices),
+            'data'       => InvoiceResource::collection($invoices->items()),
             'pagination' => [
                 'current_page' => $invoices->currentPage(),
                 'last_page'    => $invoices->lastPage(),

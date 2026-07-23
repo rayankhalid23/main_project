@@ -1,0 +1,39 @@
+{
+    "clientName": "Thunder Client",
+    "collectionName": "مشروع التخرج",
+    "collectionId": "4cef04d7-f4db-4b60-901b-8655e16880cd",
+    "dateExported": "2026-06-07T21:04:40.793Z",
+    "version": "1.4",
+    "folders": [],
+    "requests": [
+        {
+            "_id": "e220681e-8c1a-4ac5-85bf-d14889f06ca3",
+            "colId": "4cef04d7-f4db-4b60-901b-8655e16880cd",
+            "containerId": "",
+            "name": "http://127.0.0.1:8000/api/auth/login",
+            "url": "http://127.0.0.1:8000/api/auth/login",
+            "method": "POST",
+            "sortNum": 10000,
+            "created": "2026-06-06T23:00:42.968Z",
+            "modified": "2026-06-06T23:00:42.968Z",
+            "headers": [
+                {
+                    "name": "Accept",
+                    "value": "*/*application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{\r",
+                    "  \"phone_number\": \"092-3181690\",\r",
+                    "  \"password\": \"123456789A\",\r",
+                    "  \"platform\": \"web\"\r",
+                    "}"
+                ],
+                "form": []
+            }
+        }
+    ],
+    "ref": "exatEPGx3nv9JWfD3D4ygEUaF-nB1WT6wSH-irjiX0WL-hXT2EjsV08UEkeEJL3E6ghUs0gPkf06_wUbDf5HDw"
+}

@@ -43,7 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
         
         Route::post('/requests', [ParentSubscriptionController::class, 'store']); 
         Route::get('/requests/{id}', [ParentSubscriptionController::class, 'show']); 
-        Route::post('subscriptions/{id}/cancel', [ParentSubscriptionController::class, 'cancel']);
+        Route::post('requests/{id}/cancel', [ParentSubscriptionController::class, 'cancel']);
     });
 
     // ============================================================
@@ -59,7 +59,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/active-subscriptions', [DriverSubscriptionController::class, 'activeSubscriptions']); 
         
         Route::get('/routes', [DriverRouteController::class, 'index']); 
-        Route::post('/trips/start', [TripController::class, 'startTrip']);
         
         // 2. مسارات تحتوي على متغيرات (Dynamic Parameters) - توضع أخيراً
         Route::put('/routes/{route}', [DriverRouteController::class, 'update']);

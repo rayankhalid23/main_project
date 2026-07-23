@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Admin;
+namespace App\Http\Controllers\Api\Parent;
 
 use App\Models\Shared\DriverReview;
 use Illuminate\Http\JsonResponse;
@@ -33,7 +33,7 @@ class DriverReviewController extends Controller
                     'driver_name' => $review->driver && $review->driver->user ? $review->driver->user->full_name : 'سائق محذوف',
                     'is_deleted'  => $review->trashed(), // يوضح للأدمن إن كان التقييم قد حذفه الأب سابقاً
                 ];
-            ]);
+            });
 
             return response()->json([
                 'status'  => true,

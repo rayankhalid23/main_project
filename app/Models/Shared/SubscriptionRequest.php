@@ -82,7 +82,12 @@ class SubscriptionRequest extends Model
                         'school_lng',
                         'school_label',
                         'price_per_child',
-                        'child_notes'
+                        'child_notes',
+                        'subscription_type',
+                        'direction',
+                        'timing',
+                        'start_date',
+                        'end_date',
                     ])
                     ->withTimestamps();
     }

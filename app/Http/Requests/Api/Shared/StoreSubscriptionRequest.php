@@ -25,23 +25,23 @@ class StoreSubscriptionRequest extends FormRequest
     return [
         'driver_id'         => 'required|integer|exists:drivers,id',
         'school_id'         => 'required|integer|exists:schools,id',
-        'subscription_type' => 'required|string|in:monthly,daily',
+        'subscription_type' => 'nullable|string|in:monthly,daily',
+        'direction'         => 'nullable|string|in:go,return,both',
+        'timing'            => 'nullable|string|in:MORNING,EVENING,BOTH',
+        'start_date'        => 'nullable|date',
+        'end_date'          => 'nullable|date',
         
-        // تم توحيد القيم لتطابق الموديل
-        'direction' => 'required|string|in:' . 
-    SubscriptionRequest::DIRECTION_GO . ',' . 
-    SubscriptionRequest::DIRECTION_RETURN . ',' . 
-    SubscriptionRequest::DIRECTION_BOTH,
-        
-        'timing'            => 'required|string|in:MORNING,EVENING,BOTH',
-        'start_date'        => 'required|date|after_or_equal:today',
-        'end_date'          => 'nullable|date|after:start_date',
-        
-        'children'          => 'required|array|min:1',
-        'children.*.child_id'         => 'required|integer|exists:children,id',
+        'children'                      => 'required|array|min:1',
+        'children.*.child_id'           => 'required|integer|exists:children,id',
         'children.*.pickup_address_id'  => 'required|integer|exists:addresses,id',
-        'children.*.dropoff_address_id' => 'required|integer|exists:addresses,id',
+        'children.*.dropoff_address_id' => 'required|integer|exists:schools,id',
         'children.*.price_per_child'    => 'required|numeric|min:0',
+        'children.*.child_notes'        => 'nullable|string',
+        'children.*.subscription_type'  => 'required|string|in:monthly,daily',
+        'children.*.direction'          => 'required|string|in:go,return,both',
+        'children.*.timing'             => 'required|string|in:MORNING,EVENING,BOTH',
+        'children.*.start_date'         => 'required|date',
+        'children.*.end_date'           => 'nullable|date',
     ];
 }
     /**

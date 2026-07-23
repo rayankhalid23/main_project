@@ -41,17 +41,24 @@ class SubscriptionRequestService
         }
 
         return DB::transaction(function () use ($data, $parent, $driver) {
+            $firstChild = $data['children'][0] ?? [];
+            $subscriptionType = $data['subscription_type'] ?? $firstChild['subscription_type'] ?? 'monthly';
+            $direction        = $data['direction'] ?? $firstChild['direction'] ?? 'both';
+            $timing           = $data['timing'] ?? $firstChild['timing'] ?? 'BOTH';
+            $startDate        = $data['start_date'] ?? $firstChild['start_date'] ?? now()->toDateString();
+            $endDate          = $data['end_date'] ?? $firstChild['end_date'] ?? null;
+
             $totalPrice = collect($data['children'])->sum(fn($c) => $c['price_per_child'] ?? 0);
 
             $subscriptionRequest = SubscriptionRequest::create([
                 'parent_id'         => $parent->id,
                 'driver_id'         => $driver->id,
                 'school_id'         => $data['school_id'] ?? null,
-                'subscription_type' => $data['subscription_type'] ?? 'monthly',
-                'direction'         => $data['direction'],
-                'timing'            => $data['timing'],
-                'start_date'        => $data['start_date'],
-                'end_date'          => $data['end_date'] ?? null,
+                'subscription_type' => $subscriptionType,
+                'direction'         => $direction,
+                'timing'            => $timing,
+                'start_date'        => $startDate,
+                'end_date'          => $endDate,
                 'days_count'        => $data['days_count'] ?? null,
                 'total_price'       => $totalPrice,
                 'pickup_time'       => $data['pickup_time'] ?? null,
@@ -63,19 +70,52 @@ class SubscriptionRequestService
             ]);
 
             foreach ($data['children'] as $childData) {
+                // Resolve Home/Address details if not passed by frontend
+                $pickupAddressId = $childData['pickup_address_id'] ?? null;
+                $homeLat = $childData['home_lat'] ?? null;
+                $homeLng = $childData['home_lng'] ?? null;
+                $homeLabel = $childData['home_label'] ?? null;
+                if ($pickupAddressId && (!$homeLat || !$homeLng || !$homeLabel)) {
+                    $address = \App\Models\Parent\Address::find($pickupAddressId);
+                    if ($address) {
+                        $homeLat = $address->lat;
+                        $homeLng = $address->lng;
+                        $homeLabel = $address->label;
+                    }
+                }
+
+                // Resolve School details if not passed by frontend
+                $dropoffAddressId = $childData['dropoff_address_id'] ?? null;
+                $schoolLat = $childData['school_lat'] ?? null;
+                $schoolLng = $childData['school_lng'] ?? null;
+                $schoolLabel = $childData['school_label'] ?? null;
+                if ($dropoffAddressId && (!$schoolLat || !$schoolLng || !$schoolLabel)) {
+                    $school = \App\Models\Parent\School::find($dropoffAddressId);
+                    if ($school) {
+                        $schoolLat = $school->lat;
+                        $schoolLng = $school->lng;
+                        $schoolLabel = $school->name;
+                    }
+                }
+
                 DB::table('request_children')->insert([
                     'request_id'         => $subscriptionRequest->id,
                     'child_id'           => $childData['child_id'],
-                    'pickup_address_id'  => $childData['pickup_address_id'] ?? null,
-                    'home_lat'           => $childData['home_lat'] ?? null,
-                    'home_lng'           => $childData['home_lng'] ?? null,
-                    'home_label'         => $childData['home_label'] ?? null,
-                    'dropoff_address_id' => $childData['dropoff_address_id'] ?? null,
-                    'school_lat'         => $childData['school_lat'] ?? null,
-                    'school_lng'         => $childData['school_lng'] ?? null,
-                    'school_label'       => $childData['school_label'] ?? null,
+                    'pickup_address_id'  => $pickupAddressId,
+                    'home_lat'           => $homeLat,
+                    'home_lng'           => $homeLng,
+                    'home_label'         => $homeLabel,
+                    'dropoff_address_id' => $dropoffAddressId,
+                    'school_lat'         => $schoolLat,
+                    'school_lng'         => $schoolLng,
+                    'school_label'       => $schoolLabel,
                     'price_per_child'    => $childData['price_per_child'] ?? 0,
                     'child_notes'        => $childData['child_notes'] ?? null,
+                    'subscription_type'  => $childData['subscription_type'] ?? $subscriptionType,
+                    'direction'          => $childData['direction'] ?? $direction,
+                    'timing'             => $childData['timing'] ?? $timing,
+                    'start_date'         => $childData['start_date'] ?? $startDate,
+                    'end_date'           => $childData['end_date'] ?? $endDate,
                 ]);
             }
 
@@ -159,7 +199,7 @@ private function handleAcceptance(SubscriptionRequest $req, ?ParentModel $parent
         
        $driverPos = ['lat' => (float)($req->driver->current_lat ?? 0), 'lng' => (float)($req->driver->current_lng ?? 0)];
        $childPos  = ['lat' => (float)($req->children->first()->pivot->home_lat ?? 0), 'lng' => (float)($req->children->first()->pivot->home_lng ?? 0)];
-       $schoolPos = ['lat' => (float)($req->school->latitude ?? 0), 'lng' => (float)($req->school->longitude ?? 0)];
+       $schoolPos = ['lat' => (float)($req->school->lat ?? 0), 'lng' => (float)($req->school->lng ?? 0)];
 
        $routeData = $osrm->calculateRoute([$driverPos, $childPos, $schoolPos]);
        

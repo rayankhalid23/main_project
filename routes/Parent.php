@@ -53,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // مسار جلب المدارس المعتمدة (الآن أصبح: api/parent/schools فوراً وبشكل صحيح)
     Route::get('schools', [SchoolController::class, 'index']);
 
+    // طلب اشتراك (يساوي المسار القديم POST /api/parent)
+    Route::post('/', [ParentSubscriptionController::class, 'store']);
+
     Route::prefix('children/{childId}')->group(function () {
         
         // جدولة غياب طفل في تواريخ معينة

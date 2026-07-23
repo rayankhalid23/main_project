@@ -45,7 +45,27 @@ class SubscriptionRequestResource extends JsonResource
                         'id'              => $child->id,
                         'name'            => $child->full_name,
                         'school_name'     => $child->school->name ?? null,
-                        'price_per_child' => (float) $child->pivot->price_per_child,
+                        'subscription'    => [
+                            'pickup_address' => [
+                                'id'    => (int) $child->pivot->pickup_address_id,
+                                'label' => $child->pivot->home_label ?? 'عنوان الركوب',
+                                'lat'   => $child->pivot->home_lat ? (float) $child->pivot->home_lat : null,
+                                'lng'   => $child->pivot->home_lng ? (float) $child->pivot->home_lng : null,
+                            ],
+                            'dropoff_address' => [
+                                'id'    => (int) $child->pivot->dropoff_address_id,
+                                'name'  => $child->pivot->school_label ?? 'المدرسة',
+                                'lat'   => $child->pivot->school_lat ? (float) $child->pivot->school_lat : null,
+                                'lng'   => $child->pivot->school_lng ? (float) $child->pivot->school_lng : null,
+                            ],
+                            'subscription_type' => $child->pivot->subscription_type,
+                            'direction'         => $child->pivot->direction,
+                            'timing'            => $child->pivot->timing,
+                            'start_date'        => $child->pivot->start_date,
+                            'end_date'          => $child->pivot->end_date,
+                            'price'             => (float) $child->pivot->price_per_child,
+                            'child_notes'       => $child->pivot->child_notes,
+                        ],
                     ];
                 });
             }),

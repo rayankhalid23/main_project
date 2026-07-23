@@ -132,7 +132,7 @@ class TripLifecycleService
 
             // تأمين إحداثيات المدرسة باعتبارها المحطة الأخيرة للكل
             if (!$schoolCoords && $sub->school) {
-                $schoolCoords = ['lat' => $sub->school->latitude, 'lng' => $sub->school->longitude];
+                $schoolCoords = ['lat' => $sub->school->lat, 'lng' => $sub->school->lng];
             }
             
             $validSubCount++;

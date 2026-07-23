@@ -28,9 +28,10 @@ class InvoiceResource extends JsonResource
 
             $this->mergeWhen($this->relationLoaded('contract'), [
                 'contract' => [
-                    'id'       => $this->contract?->id,
-                    'number'   => $this->contract?->contract_number,
-                    'status'   => $this->contract?->status,
+                    'id'              => $this->contract?->id,
+                    'number'          => $this->contract?->contract_number,
+                    'contract_number' => $this->contract?->contract_number,
+                    'status'          => $this->contract?->status,
                 ],
             ]),
 
@@ -38,6 +39,9 @@ class InvoiceResource extends JsonResource
                 'driver' => [
                     'id'   => $this->driver?->id,
                     'name' => $this->driver?->user?->full_name ?? 'غير معروف',
+                    'user' => [
+                        'full_name' => $this->driver?->user?->full_name ?? 'غير معروف',
+                    ],
                 ],
             ]),
 
@@ -45,6 +49,9 @@ class InvoiceResource extends JsonResource
                 'parent' => [
                     'id'   => $this->parent?->id,
                     'name' => $this->parent?->full_name ?? 'غير معروف',
+                    'user' => [
+                        'full_name' => $this->parent?->full_name ?? 'غير معروف',
+                    ],
                 ],
             ]),
         ];
